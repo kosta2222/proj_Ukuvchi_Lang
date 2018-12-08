@@ -1,0 +1,10 @@
+ ($
+ (// Пример процедуры)
+ (// Определение процедуры) 
+ (defun my_funcPars (params  a)
+   ($ (set! a (arif a + 1))
+   (print a)
+   (return) ))
+ (// вызов процедуры)  
+ (defun main (pass)(call my_funcPars(args 100)))
+  )
