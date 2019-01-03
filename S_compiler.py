@@ -1,17 +1,43 @@
 #-*-coding: utf-8-*-
-import libTestPydModuleFloatRegister as vt #libTestPydModuleFloatRegister-байт-интерпритатор как расширение C для Python
+"""
+		Этот модуль - компилятор s-выражений выражений ,
+		symbolic - expression просто говоря 2 скобки с данными ,
+		данные это атомы т е числа и строки .
+		Числа на этапе разделения на лексемы приводятся к типу float ,
+		я решил , что виртуальная машина будет оперировать контейнером с
+		float . Строки из букв в исходном тексте становятся литералами
+		строк Python . Интерприттируются такие выражения так , первая
+		строка идет как название функции , в ветках if-elif определяется
+		что делать с такой функцией . Параметры ее - другие s - выражения могут
+		передаваться рекурсивно компилятору , формируя байт-код для виртуальной машины .
+                        О нотации индификаторов :
+                        Для индификаторов переменных я попытался сделать наподобии Венгерской нотации т.е.
+                        идет инфо о типе , потом семантический смысл переменной , например
+                        str_char_op , int_ptr , mas_Str_OpStack означает массив с типом String ,
+                        а mas_I_Or_Str_resOpnZapis список ( массив ) с типами Int или String .
+                        Имена полей придваряются суффиксом fi ( field ) , например fi_dict_str_int_funcTable это
+                        поле - карта с сключом Str , а значением Int .
+                        Методы предваряются суффиксом me ( method ) . У функций и методов бывают сигнатуры в конце ,
+                        после буквы S ( signature ) , т.е. какие типы функция / метод принимает , например
+                        me_recurs_evalPerList_SMrV - метод recurs_evalPerList принимает M - массив / список ,
+                        возвращае Пустое т.е V ( void ) . После буквы r ( Return ) идет возвращаемое 
+                        функций / методом значение. I это всегда Int , D или F - вещественное число ,
+                        Str - String.
+
+"""
+import libTestPydModuleFloat as vt
 from struct import pack,unpack
 (   NOOP    ,
-    IADD    ,   
+    IADD    , 
     ISUB    ,
     IMUL    ,
     IDIV    ,
     IREM    ,
     IPOW    ,
     ILT     ,   
-    IEQ     ,   
-    BR      ,  
-    BRT     , 
+    IEQ     ,  
+    BR      ,   
+    BRT     ,   
     BRF     ,   
     ICONST  ,   
     LOAD    ,  
@@ -21,54 +47,12 @@ from struct import pack,unpack
     PRINT   ,  
     POP     ,  
     CALL    ,  
-    RET     , 
+    RET     ,  
     STORE_RESULT,
     LOAD_RESULT,
     HALT    
 )=range(24)
 
-
-def func_vmPrintStack_SvectorKfloatKI(par_vectorKfloatK_stack, par_I_count) :
-    print("stack=[");
-    for  i in range(0,par_I_count):
-        print(" {0}".format(par_vectorKfloatK_stack[i]));
-    
-    print(" ]\n");
-
-def func_vmPrintInstr_SvectorKintKIrV(vectorKintK_opCode) :
-    print("Compiller")
-    int_ip=0
-    for _ in range(0,len(vectorKintK_opCode)):
-      int_opcode =vectorKintK_opCode[int_ip]
-      print(int_opcode)
-      listKstrYintK_instr = listKstrK_opcodes[int_opcode];
-      int_nargs=listKstrYintK_instr[1]
-      int_ip+=1 
-      print("int_ip:",int_ip)      
-      if (int_nargs==0) :
-        
-            print("%d:  %s\n"%( int_ip,listKstrYintK_instr[0] ));
-
-      elif (int_nargs==1) :
-            if (int_opcode==ICONST):
-                print ("%d:  ICONST <double>\n"%int_ip)
-                int_ip+=4
-                continue
-            else:    
-                print("%d:  %s %d\n" %(int_ip, listKstrYintK_instr[0],vectorKintK_opCode[int_ip+1]))
-                int_ip=+1
-                break
-            
-      elif (int_nargs==2) :
-        print("%d:  %s %d %d\n"%(int_ip, listKstrYintK_instr[0],vectorKintK_opCode[int_ip+1],vectorKintK_opCode[int_ip+2] ))
-        break
-            
-      elif (int_nargs==3) :
-        print("%d:  %s %d %d %d\n"%(int_ip, listKstrYintK_instr[0],vectorKintK_opCode[int_ip+1],vectorKintK_opCode[int_ip+2],vectorKintK_opCode[int_ip+3] ))
-        break
-      
-            
-    
 
 #import pdb
 #pdb.set_trace()
@@ -76,10 +60,17 @@ import sys
 import re
 isa = isinstance
 Symbol = str
+  
 def load_file(fName):
+    """
+       Считывает файл -исходнй текст проги,возвращает строку-выражение
+    """     
     fContent=open(fName).read()
     return fContent
 def op_prior(str_char_op):
+    """
+        Приоритет арифметической операции
+    """    
     if str_char_op=="^":
         return 6
     elif str_char_op=="*":
@@ -93,203 +84,240 @@ def op_prior(str_char_op):
     elif str_char_op=="-":
         return 2 
 def isOp(c):
+    """
+        Это арифметическая операция? 
+    """     
     if c=="-" or c=="+" or c=="*" or c=="/" or c=="%"or c=="^" :return True
     return False
-def opn(str_code): 
+def opn(str_code):
+    """
+        Перевод в обратную польскую запись str_code-строка инфиксного выражения Ret список
+    """    
     int_ptr=0
-    listKstrK_OpStack=[]
-    listKintOrStr_resOpnZapis=[]
+    mas_Str_OpStack=[]
+    mas_I_Or_Str_resOpnZapis=[]
     while (int_ptr<len(str_code)): 
         v=str_code[int_ptr]
         int_ptr+=1
         if isa(v,float):
-            listKintOrStr_resOpnZapis.append(v)
+            mas_I_Or_Str_resOpnZapis.append(v)
         elif re.match("[A-Za-z]+",str(v)): 
-            listKintOrStr_resOpnZapis.append(v)            
+            mas_I_Or_Str_resOpnZapis.append(v)            
         elif isOp(v):
-                while(len(listKstrK_OpStack)>0 and 
-                listKstrK_OpStack[-1]!="[" and 
-                op_prior(v)<=op_prior(listKstrK_OpStack[-1]) ):
-                    listKintOrStr_resOpnZapis.append(listKstrK_OpStack.pop())
+                while(len(mas_Str_OpStack)>0 and 
+                mas_Str_OpStack[-1]!="[" and 
+                op_prior(v)<=op_prior(mas_Str_OpStack[-1]) ):
+                    mas_I_Or_Str_resOpnZapis.append(mas_Str_OpStack.pop())
                  
-                listKstrK_OpStack.append(v)       
+                mas_Str_OpStack.append(v)       
         elif v==']':
-            while len(listKstrK_OpStack)>0:
-                x=listKstrK_OpStack.pop()
+            while len(mas_Str_OpStack)>0:
+                x=mas_Str_OpStack.pop()
                 if x=='[':
                     break
-                listKintOrStr_resOpnZapis.append(x)
+                mas_I_Or_Str_resOpnZapis.append(x)
         elif v=="[":
-            listKstrK_OpStack.append(v)                                                          
-    while len(listKstrK_OpStack)>0 :
-           listKintOrStr_resOpnZapis.append(listKstrK_OpStack.pop())
-    return listKintOrStr_resOpnZapis 
+            mas_Str_OpStack.append(v)                                                          
+    while len(mas_Str_OpStack)>0 :
+           mas_I_Or_Str_resOpnZapis.append(mas_Str_OpStack.pop())
+    return mas_I_Or_Str_resOpnZapis 
 def floatToBytes_SfloatRbytes(float_val):
+    """
+        запаковать число как набор байт
+    """    
     return pack('>f',float_val)
 class LispMach:
- def __init__(self):   
-  self.pole_dictKstrYintK_funcTable={}
-  self.pole_vectorKintK_b_c=[]
-  self.pole_int_startIp=0
-  self.pole_int_nargs=0
- def method_genB_C_IrV(self,int_command):
-     self.pole_vectorKintK_b_c.append(int_command)
- def method_recurs_evalPerList_LrV(self,vectorKintOrStrK):
-    #print(vectorKintOrStrK)
-    if isa(vectorKintOrStrK, Symbol) : 
-        return vectorKintOrStrK
-    elif not isa(vectorKintOrStrK, list):
-        self.method_genB_C_IrV(ICONST)
-        self.method_genB_C_IrV(vectorKintOrStrK)
-        return vectorKintOrStrK 
-    elif vectorKintOrStrK[0] == '//':
+ """
+       Компилятор
+ """    
+ def __init__(self):
+  """
+       заводим карту для функций- <имя функции:индекс ее байткода>,индекс первой команды,которую нужно исполнять 
+  """     
+  self.fi_dict_str_int_funcTable={}
+  self.fi_mas_I_byteCode=[]
+  self.fi_int_startIp=0
+  self.fi_int_nargs=0
+ def me_gen_byteCode_SIrV(self,int_command):
+     """"
+          генерация байткода-int_command-опкод который нужно добавить для результирующего списка,для Vm
+     """     
+     self.fi_mas_I_byteCode.append(int_command)
+ def me_recurs_evalPerList_SMrV(self,mas_I_Or_Str):
+    """
+         рекурсивный разбор s-выражения mas_I_Or_Str -список с числами и строками 
+         как именами того какой байт-код генерировать
+         смотря на аргумент self.method_genB_C_IrV можно понять синтаксис языка 
+    """     
+    print(mas_I_Or_Str)
+    if isa(mas_I_Or_Str, Symbol) : 
         pass
-    elif vectorKintOrStrK[0] == 'set!':           # (set! var exp)
-        (_, var, exp) = vectorKintOrStrK
-        self.method_recurs_evalPerList_LrV(exp)
-        self.method_genB_C_IrV(STORE)
-        int_ordLocToStore=ord(var)-ord("a")
-        self.method_genB_C_IrV(int_ordLocToStore)
-    elif vectorKintOrStrK[0] == 'setResult!':           # (set! var exp)
-        (_, var) = vectorKintOrStrK
-        self.method_genB_C_IrV(STORE_RESULT)
+    elif  isa(mas_I_Or_Str[0], float):# Это число
+        self.me_gen_byteCode_SIrV(ICONST)
+        for i1 in floatToBytes_SfloatRbytes(mas_I_Or_Str[0]):# расскладываем float число на байты 
+            self.me_gen_byteCode_SIrV(i1)  # каждый байт записываем в выходной байт массив  
+    elif mas_I_Or_Str[0] == '//': # Это комментарии
+        pass
+    elif mas_I_Or_Str[0] == 'set!': # записываем константу/выражение в индификатор
+        (_, var, exp) = mas_I_Or_Str
+        self.me_recurs_evalPerList_SMrV(exp)
+        self.me_gen_byteCode_SIrV(STORE)
+        int_ordLocToStore=ord(var)-ord("a") # определим индекс буквы
+        self.me_gen_byteCode_SIrV(int_ordLocToStore)
+    elif mas_I_Or_Str[0] == 'setResult!':  # сохранить из регистра возврата функций в некоторую переменную 
+        (_, var) = mas_I_Or_Str
+        self.me_gen_byteCode_SIrV(STORE_RESULT)
         int_ordLocToStoreRegistr=ord(var)-ord("a")
-        self.method_genB_C_IrV(int_ordLocToStoreRegistr)        
-    elif vectorKintOrStrK[0] == 'define':         # (define var exp)
-        (_, var, exp) = vectorKintOrStrK
-        env[var] = method_recurs_evalPerList_LrV(exp)         
-    elif vectorKintOrStrK[0] == 'defun':         # (lambda (var*) exp)
-        (_,str_nameFunc, list_arg,list_expr) = vectorKintOrStrK
+        self.me_gen_byteCode_SIrV(int_ordLocToStoreRegistr)               
+    elif mas_I_Or_Str[0] == 'defun': #определить функцию          
+        (_,str_nameFunc, list_arg,list_expr) = mas_I_Or_Str
         if str_nameFunc=='main':
-            self.pole_int_startIp=len(self.pole_vectorKintK_b_c)
+            self.fi_int_startIp=len(self.fi_mas_I_byteCode)
         else:  
-            self.pole_dictKstrYintK_funcTable[str_nameFunc]=len(self.pole_vectorKintK_b_c)
-        self.method_recurs_evalPerList_LrV(list_arg)    
-        self.method_recurs_evalPerList_LrV(list_expr)
+            self.fi_dict_str_int_funcTable[str_nameFunc]=len(self.fi_mas_I_byteCode)
+        self.me_recurs_evalPerList_SMrV(list_arg)    
+        self.me_recurs_evalPerList_SMrV(list_expr)
         
            
-    elif vectorKintOrStrK[0] == '$':          # (begin exp*)
-        for exp in vectorKintOrStrK[1:]:
-            val = self.method_recurs_evalPerList_LrV(exp)
+    elif mas_I_Or_Str[0] == '$': # выполнить выражения слева направо
+        for exp in mas_I_Or_Str[1:]:
+            val = self.me_recurs_evalPerList_SMrV(exp)
         return val
-    elif vectorKintOrStrK[0]=='return':
-        self.method_genB_C_IrV(RET)        
-        
-    elif vectorKintOrStrK[0] == 'arif':
-        listKintOrStr_resOpnZapis=opn(vectorKintOrStrK[1:])
-        for i in listKintOrStr_resOpnZapis:
+    elif mas_I_Or_Str[0]=='return': # завершить функцию
+        self.me_gen_byteCode_SIrV(RET)     
+    elif mas_I_Or_Str[0] == 'arif': # Это арифметическое выражение
+        mas_I_Or_Str_resOpnZapis=opn(mas_I_Or_Str[1:]) # из инфиксной записи в ОПЗ 
+        for i in mas_I_Or_Str_resOpnZapis:
             if isOp(i):
                 if i=="+": 
-                    self.method_genB_C_IrV(IADD)
+                    self.me_gen_byteCode_SIrV(IADD)
                 if i=="-":
-                    self.method_genB_C_IrV(ISUB)
+                    self.me_gen_byteCode_SIrV(ISUB)
                 if i=="*":
-                    self.method_genB_C_IrV(IMUL)
+                    self.me_gen_byteCode_SIrV(IMUL)
                 if i=="/": 
-                    self.method_genB_C_IrV(IDIV)  
+                    self.me_gen_byteCode_SIrV(IDIV)  
                 if i=="%":
-                    self.method_genB_C_IrV(IREM)
+                    self.me_gen_byteCode_SIrV(IREM)
                 if i=="^": 
-                    self.method_genB_C_IrV(IPOW)     
-            elif re.match("[A-Za-z]+",str(i)):
+                    self.me_gen_byteCode_SIrV(IPOW)     
+            elif re.match("[a-z]+",str(i)):# Если это строковый индификатор и не есть z - загрузить его из локальных переменных 
                 if str(i)!='z':
-                  self.method_genB_C_IrV(LOAD)
-                  self.method_genB_C_IrV(ord(i)-ord("a"))
-                else:
-                    self.method_genB_C_IrV(LOAD_RESULT)
+                  self.me_gen_byteCode_SIrV(LOAD)
+                  self.me_gen_byteCode_SIrV(ord(i)-ord("a"))
+                else:# если это z то згужаем с регистра
+                    self.me_gen_byteCode_SIrV(LOAD_RESULT)
             elif isa(i,float):
-                self.method_genB_C_IrV(ICONST)
+                self.me_gen_byteCode_SIrV(ICONST)
                 for i1 in floatToBytes_SfloatRbytes(i):
-                    self.method_genB_C_IrV(i1)
-    elif vectorKintOrStrK[0] == 'print':
-        for str_temp_BukvaKakChislo in vectorKintOrStrK[1:]:  
-          self.method_genB_C_IrV(PRINT)
-          self.method_genB_C_IrV(ord(str_temp_BukvaKakChislo)-ord('a'))
-    elif vectorKintOrStrK[0] == 'call':
-        (_,str_nameFunctionToCallFromMainFunction,list_args)=vectorKintOrStrK
-        int_nameFunctionToCallFromMainFunction=self.pole_dictKstrYintK_funcTable[str_nameFunctionToCallFromMainFunction]
+                    self.me_gen_byteCode_SIrV(i1)                    
+    elif mas_I_Or_Str[0] == 'print':# отпечать букву - индидификатор
+        for str_temp_BukvaKakChislo in mas_I_Or_Str[1:]:  
+          self.me_gen_byteCode_SIrV(PRINT)
+          self.me_gen_byteCode_SIrV(ord(str_temp_BukvaKakChislo)-ord('a'))
+    elif mas_I_Or_Str[0] == 'call':# вызвать функцию
+        (_,str_nameFunctionToCallFromMainFunction,list_args)=mas_I_Or_Str
+        int_nameFunctionToCallFromMainFunction=self.fi_dict_str_int_funcTable[str_nameFunctionToCallFromMainFunction]
         print(int_nameFunctionToCallFromMainFunction)
-        self.method_recurs_evalPerList_LrV(list_args)
-        self.method_genB_C_IrV(CALL)
-        self.method_genB_C_IrV(int_nameFunctionToCallFromMainFunction)
-        self.method_genB_C_IrV(self.pole_int_nargs)
-    elif vectorKintOrStrK[0]=='<':
-        (_,list_arif1,list_arif2)=vectorKintOrStrK
-        self.method_recurs_evalPerList_LrV(list_arif1)
-        self.method_recurs_evalPerList_LrV(list_arif2)
-        self.method_genB_C_IrV(ILT)
-    elif vectorKintOrStrK[0]=='=':
-        (_,list_arif1,list_arif2)=vectorKintOrStrK
-        self.method_recurs_evalPerList_LrV(list_arif1)
-        self.method_recurs_evalPerList_LrV(list_arif2)
-        self.method_genB_C_IrV(IEQ)        
-    elif vectorKintOrStrK[0]=='if':
-        (_,list_test,list_trueEpr,list_falseExpr)=vectorKintOrStrK
-        self.method_recurs_evalPerList_LrV(list_test)
-        self.method_genB_C_IrV(BRF)
-        int_addr1=len(self.pole_vectorKintK_b_c)
-        self.method_genB_C_IrV(0)
-        self.method_recurs_evalPerList_LrV(list_trueEpr)
-        self.method_genB_C_IrV(BR)
-        int_adr2=len(self.pole_vectorKintK_b_c)
-        self.method_genB_C_IrV(0)
-        self.pole_vectorKintK_b_c[int_addr1]=len(self.pole_vectorKintK_b_c)
-        self.method_recurs_evalPerList_LrV(list_falseExpr)
-        self.pole_vectorKintK_b_c[int_adr2]=len(self.pole_vectorKintK_b_c)
-    elif vectorKintOrStrK[0]=='while':
-        (_,list_test,list_whileBody)=vectorKintOrStrK
-        int_addr1=len(self.pole_vectorKintK_b_c)
-        self.method_recurs_evalPerList_LrV(list_test)
-        self.method_genB_C_IrV(BRF)
-        int_addr2=len(self.pole_vectorKintK_b_c)
-        self.method_genB_C_IrV(0)
-        self.method_recurs_evalPerList_LrV(list_whileBody)
-        self.method_genB_C_IrV(BR)
-        self.method_genB_C_IrV(int_addr1)
-        self.pole_vectorKintK_b_c[int_addr2]=len(self.pole_vectorKintK_b_c)
+        self.me_recurs_evalPerList_SMrV(list_args)
+        self.me_gen_byteCode_SIrV(CALL)
+        self.me_gen_byteCode_SIrV(int_nameFunctionToCallFromMainFunction)
+        self.me_gen_byteCode_SIrV(self.fi_int_nargs)
+    elif mas_I_Or_Str[0]=='<':# сравнить на меньше
+        (_,list_arif1,list_arif2)=mas_I_Or_Str
+        self.me_recurs_evalPerList_SMrV(list_arif1)
+        self.me_recurs_evalPerList_SMrV(list_arif2)
+        self.me_gen_byteCode_SIrV(ILT)
+    elif mas_I_Or_Str[0]=='=':# сравнить на равенство
+        (_,list_arif1,list_arif2)=mas_I_Or_Str
+        self.me_recurs_evalPerList_SMrV(list_arif1)
+        self.me_recurs_evalPerList_SMrV(list_arif2)
+        self.me_gen_byteCode_SIrV(IEQ)        
+    elif mas_I_Or_Str[0]=='if':# если
+        (_,list_test,list_trueEpr,list_falseExpr)=mas_I_Or_Str
+        self.me_recurs_evalPerList_SMrV(list_test)
+        self.me_gen_byteCode_SIrV(BRF)
+        int_addr1=len(self.fi_mas_I_byteCode)
+        self.me_gen_byteCode_SIrV(0)
+        self.me_recurs_evalPerList_SMrV(list_trueEpr)
+        self.me_gen_byteCode_SIrV(BR)
+        int_adr2=len(self.fi_mas_I_byteCode)
+        self.me_gen_byteCode_SIrV(0)
+        self.fi_mas_I_byteCode[int_addr1]=len(self.fi_mas_I_byteCode)
+        self.me_recurs_evalPerList_SMrV(list_falseExpr)
+        self.fi_mas_I_byteCode[int_adr2]=len(self.fi_mas_I_byteCode)
+    elif mas_I_Or_Str[0]=='while': # пока
+        (_,list_test,list_whileBody)=mas_I_Or_Str
+        int_addr1=len(self.fi_mas_I_byteCode)
+        self.me_recurs_evalPerList_SMrV(list_test)
+        self.me_gen_byteCode_SIrV(BRF)
+        int_addr2=len(self.fi_mas_I_byteCode)
+        self.me_gen_byteCode_SIrV(0)
+        self.me_recurs_evalPerList_SMrV(list_whileBody)
+        self.me_gen_byteCode_SIrV(BR)
+        self.me_gen_byteCode_SIrV(int_addr1)
+        self.fi_mas_I_byteCode[int_addr2]=len(self.fi_mas_I_byteCode)
         
-    elif vectorKintOrStrK[0] == 'params':
+    elif mas_I_Or_Str[0] == 'params': # параметры функции
         j=0
-        for i in vectorKintOrStrK[1:]:
-            self.method_genB_C_IrV(LOAD)
-            self.method_genB_C_IrV(j)
-            self.method_genB_C_IrV(STORE)
-            self.method_genB_C_IrV(ord(i)-ord('a'))
+        for i in mas_I_Or_Str[1:]:
+            self.me_gen_byteCode_SIrV(LOAD)
+            self.me_gen_byteCode_SIrV(j)
+            self.me_gen_byteCode_SIrV(STORE)
+            self.me_gen_byteCode_SIrV(ord(i)-ord('a'))
             j+=1
-    elif vectorKintOrStrK[0] == 'args':
+    elif mas_I_Or_Str[0] == 'args': # аргументы функции
         j=0
-        for i in vectorKintOrStrK[1:]:
+        for i in mas_I_Or_Str[1:]:
             if  isa(i,float): 
-                self.method_genB_C_IrV(ICONST)
+                self.me_gen_byteCode_SIrV(ICONST)
                 for i1 in floatToBytes_SfloatRbytes(i):
-                    self.method_genB_C_IrV(i1)                
+                    self.me_gen_byteCode_SIrV(i1)                
             elif isa(i,str):
-                self.method_genB_C_IrV(LOAD)
-                self.method_genB_C_IrV(int(ord(i)-ord("a")))
+                self.me_gen_byteCode_SIrV(LOAD)
+                self.me_gen_byteCode_SIrV(int(ord(i)-ord("a")))
             j+=1
-        self.pole_int_nargs=j
-    elif vectorKintOrStrK[0]=='pass':
-        self.method_genB_C_IrV(NOOP)
+        self.fi_int_nargs=j
+    elif mas_I_Or_Str[0]=='callUserCos': # вызвать нативную функцию
+        self.me_gen_byteCode_SIrV(26)
+    elif mas_I_Or_Str[0]=='callUserSin': # вызвать нативную функцию
+        self.me_gen_byteCode_SIrV(27)    
+    elif mas_I_Or_Str[0]=='pass': # ничего не делать
+        self.me_gen_byteCode_SIrV(NOOP)
+    else:
+        raise Exception("Unknown keyword %s"%mas_I_Or_Str[0])
             
    
         
- def method_retB_C_VrL(self):   
-    return self.pole_vectorKintK_b_c
+ def me_ret_byteCode_SVrL(self):
+    """
+         Возвращает результирующий байт код для ВМ 
+    """      
+    return self.fi_mas_I_byteCode
  def __str__(self):
-     return "func_table:"+str(self.pole_dictKstrYintK_funcTable)+"\nvectorKintOrStrK:"+\
-      "\nvector<int>_b_c:"+str(self.pole_vectorKintK_b_c)+"\nstart_ip:"+str(self.pole_int_startIp)    
+     """
+          Возвращает строковое представление обьекта компилятора
+     """     
+     return "func_table:"+str(self.fi_dict_str_int_funcTable)+"\nmas_I_Or_Str:"+\
+      "\nvector<int>_b_c:"+str(self.fi_mas_I_byteCode)+"\nstart_ip:"+str(self.fi_int_startIp)    
      
         
 def read(s):
-    #"Read a Scheme expression from a string."
+    """
+        Читает lisp подобное выражение из строки и лексемазирует его 
+    """     
     return read_from(tokenize(s))
  
 def tokenize(s):
-    #"Convert a string into a list of tokens."
+    """
+         Ковертирует строку в питон список токенов
+    """    
     return s.replace('(',' ( ').replace(')',' ) ').split()
  
 def read_from(tokens):
-    #"Read an expression from a sequence of tokens."
+    """
+        Читает выражение,создает 'атомы' - float или строки
+    """    
     if len(tokens) == 0:
         raise SyntaxError('unexpected EOF while reading')
     token = tokens.pop(0)
@@ -305,52 +333,29 @@ def read_from(tokens):
         return atom(token)
  
 def atom(token):
-    #"Numbers become numbers; every other token is a symbol."
+    """
+       Числа становятся числами float , остальное символами,строками 
+    """    
     try: return float(token)
     except ValueError:
         try: return float(token)
         except ValueError:
             return Symbol(token)
- 
-def to_string(exp):
-    #"Convert a Python object back into a Lisp-readable string."
-    return '('+' '.join(map(to_string, exp))+')' if isa(exp, list) else str(exp)
- 
-def repl(prompt='lis.py> '):
-    #"A prompt-read-method_recurs_evalPerList_LrV-print loop."
-    obj_LispMach=LispMach()
-    while True:
-        val = obj_LispMach.method_recurs_evalPerList_LrV(parse(input(prompt)))
-        if val is not None: print (to_string(val))
-        print(obj_LispMach)    
-parse=read        
-def from_file(coContent):
-  obj_LispMach=LispMach()  
-  obj_LispMach.method_recurs_evalPerList_LrV(parse(coContent))
-  return obj_LispMach.method_retB_C_VrL()
-class Context:
-    classIvokingContext_invokingContext=None
-    metadata=None
-    returnIp=0
-    locals_=[]
-    
-    def __init__(self,
-        int_returnip):
-        self.int_returnip=int_returnip
-        self.locals_=[0]*(26)
-    def __str__(self):
-        return "locals:" + str(self.locals_)
-        
-  
 
-str_fileName=sys.argv[1] 
-obj_fileDescr=open(str_fileName,"r")
+
+ 
+
+str_fileName=sys.argv[1]
+#str_fileName='./code_Arifm.lisp' 
+fileDescr=open(str_fileName,"r")
 obj_LispMach=LispMach()
-str_textProgram=obj_fileDescr.read()
-obj_LispMach.method_recurs_evalPerList_LrV(parse(str_textProgram))
-vectorKintK_opCode=obj_LispMach.method_retB_C_VrL()
+str_textProgram=fileDescr.read()
+print(str_textProgram)
+obj_LispMach.me_recurs_evalPerList_SMrV(read(str_textProgram))
+vectorKintK_opCode=obj_LispMach.me_ret_byteCode_SVrL()
 vectorKintK_opCode.append(HALT)
 print(obj_LispMach)
-func_vmPrintInstr_SvectorKintKIrV(vectorKintK_opCode)
-float_retVal=vt.eval(vectorKintK_opCode,obj_LispMach.pole_int_startIp,0) 
+#obj_vm=Vm(vectorKintK_opCode,10,trace=True)
+#obj_vm.exec_(obj_LispMach.pole_int_startIp)
+float_retVal=vt.eval(vectorKintK_opCode,obj_LispMach.fi_int_startIp,0) 
 print(float_retVal)

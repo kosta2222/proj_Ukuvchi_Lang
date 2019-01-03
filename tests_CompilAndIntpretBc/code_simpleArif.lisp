@@ -1,0 +1,1 @@
+(begin (set! a (arif 19.8)) (print a))

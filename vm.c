@@ -1,11 +1,20 @@
-#include <stdint.h>
-#include <stdio.h>
-#include <inttypes.h>
-#include <stdbool.h>
-#include<stdlib.h>
 #include "vm.h"
+/**
+Распаковать как C float
+ */
 #define unpack754_32(i) (unpack754((i),32,8))
+/**
+Распаковать как С double
+ */
 #define unpack754_64(i) (unpack754((i),64,11))
+
+/**
+Распаковать как вещественное число
+\param[in] i float число как целое
+\param[in] bits мантисса
+\param[in] expbits експонента
+\return распакованное вещественное число
+ */
 
 long double unpack754(uint64_t i, unsigned bits, unsigned expbits) {
     long double result;
@@ -17,7 +26,7 @@ long double unpack754(uint64_t i, unsigned bits, unsigned expbits) {
 
     if (i == 0) return 0.0;
 
-    // pull the significand
+    // устанавливаем "знаковость"
     result = (i & ((1LL << significandbits) - 1)); // маска
 
     result /= (1LL << significandbits); // Конвертируем обратно во float
@@ -40,27 +49,63 @@ long double unpack754(uint64_t i, unsigned bits, unsigned expbits) {
 
 
 }
-//vm.c
 
+/** вызвать пользовательскую функцию 
+ \param [in] funcid индификатор функции
+ \param [in] argc количество аргументов
+ \param [in] массив целых аргументов
+ \return значение
+ */
+float call_user(int funcid, int argc, float *argv) {
+    float ret = 0;
+    int i;
+
+    if (funcid == 0) {
+        printf("Called user function 0 => stop.\n");
+        return ret;
+    }
+    if (funcid == 1) {
+        ret = cos(argv[-1]);
+    }
+    if (funcid == 2) {
+        ret = sin(argv[-1]);
+    }
+    printf("Called user function %d with %d args:", funcid, argc);
+    for (i = 0; i < argc; i++) {
+        printf(" %f", argv[i]);
+
+    }
+    printf("\n");
+    return ret;
+
+}
+
+/**
+Отпечатка инструкции
+ */
 typedef struct {
-    char name[14];
+    /** имя инструкции*/
+    char name[8];
+    /** количество аргументов*/
     int nargs;
 } VM_INSTRUCTION;
 
+/**Массив данных о каждой инструкции */
+
 static VM_INSTRUCTION vm_instructions[] = {
-    { "noop", 0}, 
-    { "iadd", 0}, 
-    { "isub", 0}, 
-    { "imul", 0}, 
+    { "noop", 0},
+    { "iadd", 0},
+    { "isub", 0},
+    { "imul", 0},
     {"idiv", 0},
     {"irem", 0},
     {"ipow", 0},
-    { "ilt", 0}, 
-    { "ieq", 0}, 
-    { "br", 1}, 
-    { "brt", 1}, 
-    { "brf", 1}, 
-    { "iconst", 1}, 
+    { "ilt", 0},
+    { "ieq", 0},
+    { "br", 1},
+    { "brt", 1},
+    { "brf", 1},
+    { "iconst", 1},
     { "load", 1},
     { "gload", 1},
     { "store", 1},
@@ -73,13 +118,13 @@ static VM_INSTRUCTION vm_instructions[] = {
     {"load_result", 0},
     { "halt", 0}
 };
-
+/**Инициализация контекста */
 static void vm_context_init(Context *ctx, int ip, int nlocals);
 
 void vm_init(VM *vm, unsigned char *code, int code_size, int nglobals) {
     vm->code = code;
     vm->code_size = code_size;
-    vm->globals = (float*) calloc(nglobals, sizeof (float));
+    vm->globals = (int*) calloc(nglobals, sizeof (int));
     vm->nglobals = nglobals;
 }
 
@@ -95,33 +140,44 @@ VM *vm_create(unsigned char *code, int code_size, int nglobals) {
 }
 typedef uint32_t u4;
 
-float vm_exec(VM *vm, int startip, bool trace, int int_returnPrintOpFromLocals_flag) {
+/**
+Выпоолняе байт-коды
+\param[in] vm  экземпляр Vm
+\param[in] startip с какого байта выполнять опкоды
+\param[in] trace если трассировка?
+\param[in] numberFromLocalsAsPar использовать ли число из локальных переменных
+\return число из локальных переменных
+ */
+float vm_exec(VM *vm, int startip, bool trace, int returnPrintOpFromLocals_flag) {
 
-    // registers
-    register int ip; // instruction pointer register
-    register int sp; // stack pointer register
-    register int callsp; // call stack pointer register
 
-    register float a = 0;
-    register float b = 0;
-    register int addr = 0;
-    register int offset = 0;
+    int ip;
+    int sp;
+    int callsp;
+
+    float a = 0;
+    float b = 0;
+    int addr = 0;
+    int offset = 0;
 
     ip = startip;
     sp = -1;
     callsp = -1;
-#define NEXTOP() vm->code[ip]
+    /**
+    следующая операция
+     */
+#define NEXTOP() vm->code[ip] 
+    /**
+    следующий аргумент как 'собирание' 4х байтов
+     */
 #define NEXTARGASI4() (ip+=4 ,(u4) ( (u4) (vm-> code[ip-4]<<24 ) | (u4) ( vm->code[ip-3]<<16 ) | (u4) (vm-> code[ip-2]<<8 ) | (u4) (vm-> code[ip-1] ) ) )
-    u4 opcode=-1;
-
-    while (1) {
+    u4 opcode = vm->code[ip];
+    while (opcode != HALT) {
         if (trace) {
             vm_print_instr(vm->code, ip);
 
         }
-        opcode = vm->code[ip];
         ip++;
-        
         switch (opcode) {
             case NOOP:
                 break;
@@ -145,6 +201,13 @@ float vm_exec(VM *vm, int startip, bool trace, int int_returnPrintOpFromLocals_f
                 a = vm->stack[sp--];
                 vm->stack[++sp] = a / b;
                 break;
+
+            case IREM:
+                b =  vm->stack[sp--];
+                a =  vm->stack[sp--];
+                vm->stack[++sp] =(int) a % (int)b;
+                break;
+
             case IPOW:
                 b = vm->stack[sp--];
                 a = vm->stack[sp--];
@@ -172,13 +235,13 @@ float vm_exec(VM *vm, int startip, bool trace, int int_returnPrintOpFromLocals_f
                 if (vm->stack[sp--] == false) ip = addr;
                 break;
             case ICONST:
-                vm->stack[++sp] = unpack754_32(NEXTARGASI4()); 
+                vm->stack[++sp] = unpack754_32(NEXTARGASI4());
                 break;
-            case LOAD: 
+            case LOAD:
                 offset = vm->code[ip++];
                 vm->stack[++sp] = vm->call_stack[callsp].locals[offset];
                 break;
-            case GLOAD: 
+            case GLOAD:
                 addr = vm->code[ip++];
                 vm->stack[++sp] = vm->globals[addr];
                 break;
@@ -192,11 +255,11 @@ float vm_exec(VM *vm, int startip, bool trace, int int_returnPrintOpFromLocals_f
                 break;
             case PRINT:
             {
-                int int_chisloIzLocalnihKakParametr = vm->code[ip++];
-                float float_chisloIzLocalnih = vm->call_stack[callsp].locals[int_chisloIzLocalnihKakParametr];
-                printf("print: %f\n", float_chisloIzLocalnih);
-                if (int_returnPrintOpFromLocals_flag) {
-                    return float_chisloIzLocalnih;
+                int numberFromLocalsAsPar = vm->code[ip++];
+                float numberFromLocals = vm->call_stack[callsp].locals[numberFromLocalsAsPar];
+                printf("print: %f\n", numberFromLocals);
+                if (returnPrintOpFromLocals_flag) {
+                    return numberFromLocals;
                 }
 
                 break;
@@ -204,29 +267,46 @@ float vm_exec(VM *vm, int startip, bool trace, int int_returnPrintOpFromLocals_f
             case POP:
                 --sp;
                 break;
-            case HALT:
-                return 0.0;
+            case 25 ... 25 + 15:
+            {
+                int argc = (int) vm->stack[sp--];
+                float argv[argc];
+                for (int i = 0; i < argc; i++) {
+                    argv[i] = vm->stack[sp--];
+
+                }
+                a = call_user(opcode - 25, argc, argv);
+                if (argc != 0) {
+                    vm->float_registrThatRetFunc = a;
+
+                }
+
+
+
+                break;
+
+            }
             case CALL:
             {
-                // expects all args on stack
-                addr = vm->code[ip++]; // index of target function
-                int nargs = vm->code[ip++]; // how many args got pushed
+
+                addr = vm->code[ip++];
+                int nargs = vm->code[ip++];
                 int I_firstarg = sp - nargs + 1;
-                ++callsp; // bump stack pointer to reveal space for this call
-                // how many locals to allocate
+                ++callsp;
+
                 vm_context_init(&vm->call_stack[callsp], ip, 26);
-                // copy args into new context
+
                 for (int i = 0; i < nargs; i++) {
                     vm->call_stack[callsp].locals[i] = vm->stack[I_firstarg + i];
                 }
                 sp -= nargs;
-                ip = addr; // jump to function
+                ip = addr;
                 break;
             }
             case RET:
             {
                 ip = vm->call_stack[callsp].returnip;
-                callsp--; // pop context
+                callsp--;
                 break;
             }
             case STORE_RESULT:
@@ -240,6 +320,7 @@ float vm_exec(VM *vm, int startip, bool trace, int int_returnPrintOpFromLocals_f
                 vm->stack[++sp] = vm->float_registrThatRetFunc;
                 break;
             }
+
             default:
             {
                 printf("invalid opcode: %d at ip=%d\n", opcode, (ip - 1));
@@ -249,7 +330,9 @@ float vm_exec(VM *vm, int startip, bool trace, int int_returnPrintOpFromLocals_f
         }
 
         if (trace) vm_print_stack(vm->stack, sp);
-      
+        opcode = vm->code[ip];
+
+
 
     }
     if (trace) {
@@ -274,10 +357,12 @@ void vm_print_instr(unsigned char *code, int ip) {
             break;
         case 1:
             if (opcode == ICONST) {
-                printf("%04d:  %-10s<double>", ip, inst->name);
+
+                printf("%04d: ICONST %f", ip, (float) unpack754_32((u4) (code[ip + 1 ] << 24) | (u4) (code[ip + 2] << 16) | (u4) (code[ip + 3] << 8) | (u4) (code[ip + 4])));
             } else {
                 printf("%04d:  %-10s%-10d", ip, inst->name, code[ip + 1]);
             }
+
 
             break;
         case 2:
@@ -315,13 +400,14 @@ void vm_print_locals(float *locals, int count) {
     }
 }
 
+/** Выполнить Вм для Python расширения
+ */
 static PyObject* evalVm_poPoRpo(PyObject *self, PyObject * args) {
-    
     PyObject * po_listObj;
     int int_startIp;
-    int int_returnPrintOpFromLocals_flag = 0;
+    int returnPrintOpFromLocals_flag = 0;
 
-    if (!PyArg_ParseTuple(args, "Oii", &po_listObj, &int_startIp, &int_returnPrintOpFromLocals_flag)) {
+    if (!PyArg_ParseTuple(args, "Oii", &po_listObj, &int_startIp, &returnPrintOpFromLocals_flag)) {
         return NULL;
     }
 
@@ -338,7 +424,7 @@ static PyObject* evalVm_poPoRpo(PyObject *self, PyObject * args) {
     }
     VM* vm = vm_create(ucharPtr_vectorKcharK_ProgramsOpcodes, int_length_PyList, 9);
     float float_returnedFromPrintOp = 0.0;
-    float_returnedFromPrintOp = vm_exec(vm, int_startIp, true, int_returnPrintOpFromLocals_flag);
+    float_returnedFromPrintOp = vm_exec(vm, int_startIp, true, returnPrintOpFromLocals_flag);
     vm_print_data(vm->globals, vm->nglobals);
     vm_free(vm);
     return Py_BuildValue("f", float_returnedFromPrintOp);
@@ -350,19 +436,25 @@ static PyObject* evalVm_poPoRpo(PyObject *self, PyObject * args) {
 
 
 }
+/**Какие функции задействуем для Python расширения */
 static PyMethodDef funcs[] = {
     {"eval", (PyCFunction) evalVm_poPoRpo, METH_VARARGS, ""},
     {NULL, NULL, 0, NULL}
 };
+/** Структура Python модуля */
 static struct PyModuleDef cModPyDem = {
     PyModuleDef_HEAD_INIT,
+
     "VmTestPy",
+
     "",
     -1,
+
     funcs
 };
 
-PyMODINIT_FUNC PyInit_libTestPydModuleFloatRegister(void) {
+/** Экспорт в python */
+PyMODINIT_FUNC PyInit_libTestPydModuleFloat(void) {
     return PyModule_Create(&cModPyDem);
 
 

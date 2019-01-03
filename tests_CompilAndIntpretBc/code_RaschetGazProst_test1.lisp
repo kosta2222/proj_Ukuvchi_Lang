@@ -1,0 +1,1 @@
+($ (defun raschet_gaza (params a b  )($ (set! o (arif a / 3 ))(print o)(set! p (arif o * b))(print p)(if (o <  171)($ ( (set! m (arif [ a / 2 ] * o )) (print m)))(print o))))(defun main (pass)($(call raschet_gaza (args 5.48 600 ))))))
