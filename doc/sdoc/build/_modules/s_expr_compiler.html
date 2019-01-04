@@ -1,0 +1,471 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ru">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>s_expr_compiler &#8212; Документация UkuvchiDoc </title>
+    <link rel="stylesheet" href="../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="../_static/translations.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="../genindex.html" />
+    <link rel="search" title="Поиск" href="../search.html" />
+   
+  <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Исходный код s_expr_compiler</h1><div class="highlight"><pre>
+<span></span><span class="c1">#-*-coding: utf-8-*-</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">		Этот модуль - компилятор s-выражений выражений ,</span>
+<span class="sd">		symbolic - expression просто говоря 2 скобки с данными ,</span>
+<span class="sd">		данные это атомы т е числа и строки .</span>
+<span class="sd">		Числа на этапе разделения на лексемы приводятся к типу float ,</span>
+<span class="sd">		я решил , что виртуальная машина будет оперировать контейнером с</span>
+<span class="sd">		float . Строки из букв в исходном тексте становятся литералами</span>
+<span class="sd">		строк Python . Интерприттируются такие выражения так , первая</span>
+<span class="sd">		строка идет как название функции , в ветках if-elif определяется</span>
+<span class="sd">		что делать с такой функцией . Параметры ее - другие s - выражения могут</span>
+<span class="sd">		передаваться рекурсивно компилятору , формируя байт-код для виртуальной машины .</span>
+<span class="sd">                        О нотации индификаторов :</span>
+<span class="sd">                        Для индификаторов переменных я попытался сделать наподобии Венгерской нотации т.е.</span>
+<span class="sd">                        идет инфо о типе , потом семантический смысл переменной , например</span>
+<span class="sd">                        str_char_op , int_ptr , mas_Str_OpStack означает массив с типом String ,</span>
+<span class="sd">                        а mas_I_Or_Str_resOpnZapis список ( массив ) с типами Int или String .</span>
+<span class="sd">                        Имена полей придваряются суффиксом fi ( field ) , например fi_dict_str_int_funcTable это</span>
+<span class="sd">                        поле - карта с сключом Str , а значением Int .</span>
+<span class="sd">                        Методы предваряются суффиксом me ( method ) . У функций и методов бывают сигнатуры в конце ,</span>
+<span class="sd">                        после буквы S ( signature ) , т.е. какие типы функция / метод принимает , например</span>
+<span class="sd">                        me_recurs_evalPerList_SMrV - метод recurs_evalPerList принимает M - массив / список ,</span>
+<span class="sd">                        возвращае Пустое т.е V ( void ) . После буквы r ( Return ) идет возвращаемое </span>
+<span class="sd">                        функций / методом значение. I это всегда Int , D или F - вещественное число ,</span>
+<span class="sd">                        Str - String.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">import</span> <span class="nn">libTestPydModuleFloat</span> <span class="k">as</span> <span class="nn">vt</span>
+<span class="kn">from</span> <span class="nn">struct</span> <span class="k">import</span> <span class="n">pack</span><span class="p">,</span><span class="n">unpack</span>
+<span class="p">(</span>   <span class="n">NOOP</span>    <span class="p">,</span>
+    <span class="n">IADD</span>    <span class="p">,</span> 
+    <span class="n">ISUB</span>    <span class="p">,</span>
+    <span class="n">IMUL</span>    <span class="p">,</span>
+    <span class="n">IDIV</span>    <span class="p">,</span>
+    <span class="n">IREM</span>    <span class="p">,</span>
+    <span class="n">IPOW</span>    <span class="p">,</span>
+    <span class="n">ILT</span>     <span class="p">,</span>   
+    <span class="n">IEQ</span>     <span class="p">,</span>  
+    <span class="n">BR</span>      <span class="p">,</span>   
+    <span class="n">BRT</span>     <span class="p">,</span>   
+    <span class="n">BRF</span>     <span class="p">,</span>   
+    <span class="n">ICONST</span>  <span class="p">,</span>   
+    <span class="n">LOAD</span>    <span class="p">,</span>  
+    <span class="n">GLOAD</span>   <span class="p">,</span>  
+    <span class="n">STORE</span>   <span class="p">,</span>  
+    <span class="n">GSTORE</span>  <span class="p">,</span>  
+    <span class="n">PRINT</span>   <span class="p">,</span>  
+    <span class="n">POP</span>     <span class="p">,</span>  
+    <span class="n">CALL</span>    <span class="p">,</span>  
+    <span class="n">RET</span>     <span class="p">,</span>  
+    <span class="n">STORE_RESULT</span><span class="p">,</span>
+    <span class="n">LOAD_RESULT</span><span class="p">,</span>
+    <span class="n">HALT</span>    
+<span class="p">)</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">24</span><span class="p">)</span>
+
+
+<span class="c1">#import pdb</span>
+<span class="c1">#pdb.set_trace()</span>
+<span class="kn">import</span> <span class="nn">sys</span>
+<span class="kn">import</span> <span class="nn">re</span>
+<span class="n">isa</span> <span class="o">=</span> <span class="nb">isinstance</span>
+<span class="n">Symbol</span> <span class="o">=</span> <span class="nb">str</span>
+  
+<div class="viewcode-block" id="load_file"><a class="viewcode-back" href="../s_expr_compiler.html#s_expr_compiler.load_file">[документация]</a><span class="k">def</span> <span class="nf">load_file</span><span class="p">(</span><span class="n">fName</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">       Считывает файл -исходнй текст проги,возвращает строку-выражение</span>
+<span class="sd">    &quot;&quot;&quot;</span>     
+    <span class="n">fContent</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="n">fName</span><span class="p">)</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">fContent</span></div>
+<div class="viewcode-block" id="op_prior"><a class="viewcode-back" href="../s_expr_compiler.html#s_expr_compiler.op_prior">[документация]</a><span class="k">def</span> <span class="nf">op_prior</span><span class="p">(</span><span class="n">str_char_op</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Приоритет арифметической операции</span>
+<span class="sd">    &quot;&quot;&quot;</span>    
+    <span class="k">if</span> <span class="n">str_char_op</span><span class="o">==</span><span class="s2">&quot;^&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">6</span>
+    <span class="k">elif</span> <span class="n">str_char_op</span><span class="o">==</span><span class="s2">&quot;*&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">5</span>
+    <span class="k">elif</span> <span class="n">str_char_op</span><span class="o">==</span><span class="s2">&quot;/&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">5</span>
+    <span class="k">elif</span> <span class="n">str_char_op</span><span class="o">==</span><span class="s2">&quot;%&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">3</span>
+    <span class="k">elif</span> <span class="n">str_char_op</span><span class="o">==</span><span class="s2">&quot;+&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">2</span>
+    <span class="k">elif</span> <span class="n">str_char_op</span><span class="o">==</span><span class="s2">&quot;-&quot;</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">2</span> </div>
+<div class="viewcode-block" id="isOp"><a class="viewcode-back" href="../s_expr_compiler.html#s_expr_compiler.isOp">[документация]</a><span class="k">def</span> <span class="nf">isOp</span><span class="p">(</span><span class="n">c</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Это арифметическая операция? </span>
+<span class="sd">    &quot;&quot;&quot;</span>     
+    <span class="k">if</span> <span class="n">c</span><span class="o">==</span><span class="s2">&quot;-&quot;</span> <span class="ow">or</span> <span class="n">c</span><span class="o">==</span><span class="s2">&quot;+&quot;</span> <span class="ow">or</span> <span class="n">c</span><span class="o">==</span><span class="s2">&quot;*&quot;</span> <span class="ow">or</span> <span class="n">c</span><span class="o">==</span><span class="s2">&quot;/&quot;</span> <span class="ow">or</span> <span class="n">c</span><span class="o">==</span><span class="s2">&quot;%&quot;</span><span class="ow">or</span> <span class="n">c</span><span class="o">==</span><span class="s2">&quot;^&quot;</span> <span class="p">:</span><span class="k">return</span> <span class="kc">True</span>
+    <span class="k">return</span> <span class="kc">False</span></div>
+<div class="viewcode-block" id="opn"><a class="viewcode-back" href="../s_expr_compiler.html#s_expr_compiler.opn">[документация]</a><span class="k">def</span> <span class="nf">opn</span><span class="p">(</span><span class="n">str_code</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Перевод в обратную польскую запись str_code-строка инфиксного выражения Ret список</span>
+<span class="sd">    &quot;&quot;&quot;</span>    
+    <span class="n">int_ptr</span><span class="o">=</span><span class="mi">0</span>
+    <span class="n">mas_Str_OpStack</span><span class="o">=</span><span class="p">[]</span>
+    <span class="n">mas_I_Or_Str_resOpnZapis</span><span class="o">=</span><span class="p">[]</span>
+    <span class="k">while</span> <span class="p">(</span><span class="n">int_ptr</span><span class="o">&lt;</span><span class="nb">len</span><span class="p">(</span><span class="n">str_code</span><span class="p">)):</span> 
+        <span class="n">v</span><span class="o">=</span><span class="n">str_code</span><span class="p">[</span><span class="n">int_ptr</span><span class="p">]</span>
+        <span class="n">int_ptr</span><span class="o">+=</span><span class="mi">1</span>
+        <span class="k">if</span> <span class="n">isa</span><span class="p">(</span><span class="n">v</span><span class="p">,</span><span class="nb">float</span><span class="p">):</span>
+            <span class="n">mas_I_Or_Str_resOpnZapis</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;[A-Za-z]+&quot;</span><span class="p">,</span><span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)):</span> 
+            <span class="n">mas_I_Or_Str_resOpnZapis</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>            
+        <span class="k">elif</span> <span class="n">isOp</span><span class="p">(</span><span class="n">v</span><span class="p">):</span>
+                <span class="k">while</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">mas_Str_OpStack</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span> <span class="ow">and</span> 
+                <span class="n">mas_Str_OpStack</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">!=</span><span class="s2">&quot;[&quot;</span> <span class="ow">and</span> 
+                <span class="n">op_prior</span><span class="p">(</span><span class="n">v</span><span class="p">)</span><span class="o">&lt;=</span><span class="n">op_prior</span><span class="p">(</span><span class="n">mas_Str_OpStack</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span> <span class="p">):</span>
+                    <span class="n">mas_I_Or_Str_resOpnZapis</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mas_Str_OpStack</span><span class="o">.</span><span class="n">pop</span><span class="p">())</span>
+                 
+                <span class="n">mas_Str_OpStack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>       
+        <span class="k">elif</span> <span class="n">v</span><span class="o">==</span><span class="s1">&#39;]&#39;</span><span class="p">:</span>
+            <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">mas_Str_OpStack</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span><span class="p">:</span>
+                <span class="n">x</span><span class="o">=</span><span class="n">mas_Str_OpStack</span><span class="o">.</span><span class="n">pop</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">x</span><span class="o">==</span><span class="s1">&#39;[&#39;</span><span class="p">:</span>
+                    <span class="k">break</span>
+                <span class="n">mas_I_Or_Str_resOpnZapis</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">v</span><span class="o">==</span><span class="s2">&quot;[&quot;</span><span class="p">:</span>
+            <span class="n">mas_Str_OpStack</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>                                                          
+    <span class="k">while</span> <span class="nb">len</span><span class="p">(</span><span class="n">mas_Str_OpStack</span><span class="p">)</span><span class="o">&gt;</span><span class="mi">0</span> <span class="p">:</span>
+           <span class="n">mas_I_Or_Str_resOpnZapis</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">mas_Str_OpStack</span><span class="o">.</span><span class="n">pop</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">mas_I_Or_Str_resOpnZapis</span> </div>
+<div class="viewcode-block" id="floatToBytes_SfloatRbytes"><a class="viewcode-back" href="../s_expr_compiler.html#s_expr_compiler.floatToBytes_SfloatRbytes">[документация]</a><span class="k">def</span> <span class="nf">floatToBytes_SfloatRbytes</span><span class="p">(</span><span class="n">float_val</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        запаковать число как набор байт</span>
+<span class="sd">    &quot;&quot;&quot;</span>    
+    <span class="k">return</span> <span class="n">pack</span><span class="p">(</span><span class="s1">&#39;&gt;f&#39;</span><span class="p">,</span><span class="n">float_val</span><span class="p">)</span></div>
+<div class="viewcode-block" id="LispMach"><a class="viewcode-back" href="../s_expr_compiler.html#s_expr_compiler.LispMach">[документация]</a><span class="k">class</span> <span class="nc">LispMach</span><span class="p">:</span>
+ <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">       Компилятор</span>
+<span class="sd"> &quot;&quot;&quot;</span>    
+ <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+  <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">       заводим карту для функций- &lt;имя функции:индекс ее байткода&gt;,индекс первой команды,которую нужно исполнять </span>
+<span class="sd">  &quot;&quot;&quot;</span>     
+  <span class="bp">self</span><span class="o">.</span><span class="n">fi_dict_str_int_funcTable</span><span class="o">=</span><span class="p">{}</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="o">=</span><span class="p">[]</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">fi_int_startIp</span><span class="o">=</span><span class="mi">0</span>
+  <span class="bp">self</span><span class="o">.</span><span class="n">fi_int_nargs</span><span class="o">=</span><span class="mi">0</span>
+<div class="viewcode-block" id="LispMach.me_gen_byteCode_SIrV"><a class="viewcode-back" href="../s_expr_compiler.html#s_expr_compiler.LispMach.me_gen_byteCode_SIrV">[документация]</a> <span class="k">def</span> <span class="nf">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">int_command</span><span class="p">):</span>
+     <span class="sd">&quot;&quot;&quot;&quot;</span>
+<span class="sd">          генерация байткода-int_command-опкод который нужно добавить для результирующего списка,для Vm</span>
+<span class="sd">     &quot;&quot;&quot;</span>     
+     <span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">int_command</span><span class="p">)</span></div>
+<div class="viewcode-block" id="LispMach.me_recurs_evalPerList_SMrV"><a class="viewcode-back" href="../s_expr_compiler.html#s_expr_compiler.LispMach.me_recurs_evalPerList_SMrV">[документация]</a> <span class="k">def</span> <span class="nf">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span><span class="n">mas_I_Or_Str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">         рекурсивный разбор s-выражения mas_I_Or_Str -список с числами и строками </span>
+<span class="sd">         как именами того какой байт-код генерировать</span>
+<span class="sd">         смотря на аргумент self.method_genB_C_IrV можно понять синтаксис языка </span>
+<span class="sd">    &quot;&quot;&quot;</span>     
+    <span class="nb">print</span><span class="p">(</span><span class="n">mas_I_Or_Str</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">isa</span><span class="p">(</span><span class="n">mas_I_Or_Str</span><span class="p">,</span> <span class="n">Symbol</span><span class="p">)</span> <span class="p">:</span> 
+        <span class="k">pass</span>
+    <span class="k">elif</span>  <span class="n">isa</span><span class="p">(</span><span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">float</span><span class="p">):</span><span class="c1"># Это число</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">ICONST</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">i1</span> <span class="ow">in</span> <span class="n">floatToBytes_SfloatRbytes</span><span class="p">(</span><span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span><span class="c1"># расскладываем float число на байты </span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">i1</span><span class="p">)</span>  <span class="c1"># каждый байт записываем в выходной байт массив  </span>
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;//&#39;</span><span class="p">:</span> <span class="c1"># Это комментарии</span>
+        <span class="k">pass</span>
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;set!&#39;</span><span class="p">:</span> <span class="c1"># записываем константу/выражение в индификатор</span>
+        <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">var</span><span class="p">,</span> <span class="n">exp</span><span class="p">)</span> <span class="o">=</span> <span class="n">mas_I_Or_Str</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">STORE</span><span class="p">)</span>
+        <span class="n">int_ordLocToStore</span><span class="o">=</span><span class="nb">ord</span><span class="p">(</span><span class="n">var</span><span class="p">)</span><span class="o">-</span><span class="nb">ord</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span> <span class="c1"># определим индекс буквы</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">int_ordLocToStore</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;setResult!&#39;</span><span class="p">:</span>  <span class="c1"># сохранить из регистра возврата функций в некоторую переменную </span>
+        <span class="p">(</span><span class="n">_</span><span class="p">,</span> <span class="n">var</span><span class="p">)</span> <span class="o">=</span> <span class="n">mas_I_Or_Str</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">STORE_RESULT</span><span class="p">)</span>
+        <span class="n">int_ordLocToStoreRegistr</span><span class="o">=</span><span class="nb">ord</span><span class="p">(</span><span class="n">var</span><span class="p">)</span><span class="o">-</span><span class="nb">ord</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">int_ordLocToStoreRegistr</span><span class="p">)</span>               
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;defun&#39;</span><span class="p">:</span> <span class="c1">#определить функцию          </span>
+        <span class="p">(</span><span class="n">_</span><span class="p">,</span><span class="n">str_nameFunc</span><span class="p">,</span> <span class="n">list_arg</span><span class="p">,</span><span class="n">list_expr</span><span class="p">)</span> <span class="o">=</span> <span class="n">mas_I_Or_Str</span>
+        <span class="k">if</span> <span class="n">str_nameFunc</span><span class="o">==</span><span class="s1">&#39;main&#39;</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">fi_int_startIp</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>  
+            <span class="bp">self</span><span class="o">.</span><span class="n">fi_dict_str_int_funcTable</span><span class="p">[</span><span class="n">str_nameFunc</span><span class="p">]</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">list_arg</span><span class="p">)</span>    
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">list_expr</span><span class="p">)</span>
+        
+           
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;$&#39;</span><span class="p">:</span> <span class="c1"># выполнить выражения слева направо</span>
+        <span class="k">for</span> <span class="n">exp</span> <span class="ow">in</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="n">val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">exp</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">val</span>
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;return&#39;</span><span class="p">:</span> <span class="c1"># завершить функцию</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">RET</span><span class="p">)</span>     
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;arif&#39;</span><span class="p">:</span> <span class="c1"># Это арифметическое выражение</span>
+        <span class="n">mas_I_Or_Str_resOpnZapis</span><span class="o">=</span><span class="n">opn</span><span class="p">(</span><span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">1</span><span class="p">:])</span> <span class="c1"># из инфиксной записи в ОПЗ </span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">mas_I_Or_Str_resOpnZapis</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">isOp</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">i</span><span class="o">==</span><span class="s2">&quot;+&quot;</span><span class="p">:</span> 
+                    <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">IADD</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">i</span><span class="o">==</span><span class="s2">&quot;-&quot;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">ISUB</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">i</span><span class="o">==</span><span class="s2">&quot;*&quot;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">IMUL</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">i</span><span class="o">==</span><span class="s2">&quot;/&quot;</span><span class="p">:</span> 
+                    <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">IDIV</span><span class="p">)</span>  
+                <span class="k">if</span> <span class="n">i</span><span class="o">==</span><span class="s2">&quot;%&quot;</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">IREM</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">i</span><span class="o">==</span><span class="s2">&quot;^&quot;</span><span class="p">:</span> 
+                    <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">IPOW</span><span class="p">)</span>     
+            <span class="k">elif</span> <span class="n">re</span><span class="o">.</span><span class="n">match</span><span class="p">(</span><span class="s2">&quot;[a-z]+&quot;</span><span class="p">,</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)):</span><span class="c1"># Если это строковый индификатор и не есть z - загрузить его из локальных переменных </span>
+                <span class="k">if</span> <span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">!=</span><span class="s1">&#39;z&#39;</span><span class="p">:</span>
+                  <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">LOAD</span><span class="p">)</span>
+                  <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">-</span><span class="nb">ord</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">))</span>
+                <span class="k">else</span><span class="p">:</span><span class="c1"># если это z то згужаем с регистра</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">LOAD_RESULT</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="n">isa</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="nb">float</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">ICONST</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i1</span> <span class="ow">in</span> <span class="n">floatToBytes_SfloatRbytes</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">i1</span><span class="p">)</span>                    
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;print&#39;</span><span class="p">:</span><span class="c1"># отпечать букву - индидификатор</span>
+        <span class="k">for</span> <span class="n">str_temp_BukvaKakChislo</span> <span class="ow">in</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>  
+          <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">PRINT</span><span class="p">)</span>
+          <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">str_temp_BukvaKakChislo</span><span class="p">)</span><span class="o">-</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">))</span>
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;call&#39;</span><span class="p">:</span><span class="c1"># вызвать функцию</span>
+        <span class="p">(</span><span class="n">_</span><span class="p">,</span><span class="n">str_nameFunctionToCallFromMainFunction</span><span class="p">,</span><span class="n">list_args</span><span class="p">)</span><span class="o">=</span><span class="n">mas_I_Or_Str</span>
+        <span class="n">int_nameFunctionToCallFromMainFunction</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_dict_str_int_funcTable</span><span class="p">[</span><span class="n">str_nameFunctionToCallFromMainFunction</span><span class="p">]</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">int_nameFunctionToCallFromMainFunction</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">list_args</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">CALL</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">int_nameFunctionToCallFromMainFunction</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_int_nargs</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;&lt;&#39;</span><span class="p">:</span><span class="c1"># сравнить на меньше</span>
+        <span class="p">(</span><span class="n">_</span><span class="p">,</span><span class="n">list_arif1</span><span class="p">,</span><span class="n">list_arif2</span><span class="p">)</span><span class="o">=</span><span class="n">mas_I_Or_Str</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">list_arif1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">list_arif2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">ILT</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;=&#39;</span><span class="p">:</span><span class="c1"># сравнить на равенство</span>
+        <span class="p">(</span><span class="n">_</span><span class="p">,</span><span class="n">list_arif1</span><span class="p">,</span><span class="n">list_arif2</span><span class="p">)</span><span class="o">=</span><span class="n">mas_I_Or_Str</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">list_arif1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">list_arif2</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">IEQ</span><span class="p">)</span>        
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;if&#39;</span><span class="p">:</span><span class="c1"># если</span>
+        <span class="p">(</span><span class="n">_</span><span class="p">,</span><span class="n">list_test</span><span class="p">,</span><span class="n">list_trueEpr</span><span class="p">,</span><span class="n">list_falseExpr</span><span class="p">)</span><span class="o">=</span><span class="n">mas_I_Or_Str</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">list_test</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">BRF</span><span class="p">)</span>
+        <span class="n">int_addr1</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">list_trueEpr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">BR</span><span class="p">)</span>
+        <span class="n">int_adr2</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="p">[</span><span class="n">int_addr1</span><span class="p">]</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">list_falseExpr</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="p">[</span><span class="n">int_adr2</span><span class="p">]</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;while&#39;</span><span class="p">:</span> <span class="c1"># пока</span>
+        <span class="p">(</span><span class="n">_</span><span class="p">,</span><span class="n">list_test</span><span class="p">,</span><span class="n">list_whileBody</span><span class="p">)</span><span class="o">=</span><span class="n">mas_I_Or_Str</span>
+        <span class="n">int_addr1</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">list_test</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">BRF</span><span class="p">)</span>
+        <span class="n">int_addr2</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">list_whileBody</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">BR</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">int_addr1</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="p">[</span><span class="n">int_addr2</span><span class="p">]</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="p">)</span>
+        
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;params&#39;</span><span class="p">:</span> <span class="c1"># параметры функции</span>
+        <span class="n">j</span><span class="o">=</span><span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">LOAD</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">STORE</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">-</span><span class="nb">ord</span><span class="p">(</span><span class="s1">&#39;a&#39;</span><span class="p">))</span>
+            <span class="n">j</span><span class="o">+=</span><span class="mi">1</span>
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;args&#39;</span><span class="p">:</span> <span class="c1"># аргументы функции</span>
+        <span class="n">j</span><span class="o">=</span><span class="mi">0</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+            <span class="k">if</span>  <span class="n">isa</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="nb">float</span><span class="p">):</span> 
+                <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">ICONST</span><span class="p">)</span>
+                <span class="k">for</span> <span class="n">i1</span> <span class="ow">in</span> <span class="n">floatToBytes_SfloatRbytes</span><span class="p">(</span><span class="n">i</span><span class="p">):</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">i1</span><span class="p">)</span>                
+            <span class="k">elif</span> <span class="n">isa</span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="nb">str</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">LOAD</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">ord</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="o">-</span><span class="nb">ord</span><span class="p">(</span><span class="s2">&quot;a&quot;</span><span class="p">)))</span>
+            <span class="n">j</span><span class="o">+=</span><span class="mi">1</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">fi_int_nargs</span><span class="o">=</span><span class="n">j</span>
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;callUserCos&#39;</span><span class="p">:</span> <span class="c1"># вызвать нативную функцию</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="mi">26</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;callUserSin&#39;</span><span class="p">:</span> <span class="c1"># вызвать нативную функцию</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="mi">27</span><span class="p">)</span>    
+    <span class="k">elif</span> <span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">==</span><span class="s1">&#39;pass&#39;</span><span class="p">:</span> <span class="c1"># ничего не делать</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">me_gen_byteCode_SIrV</span><span class="p">(</span><span class="n">NOOP</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Unknown keyword </span><span class="si">%s</span><span class="s2">&quot;</span><span class="o">%</span><span class="n">mas_I_Or_Str</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span></div>
+            
+   
+        
+<div class="viewcode-block" id="LispMach.me_ret_byteCode_SVrL"><a class="viewcode-back" href="../s_expr_compiler.html#s_expr_compiler.LispMach.me_ret_byteCode_SVrL">[документация]</a> <span class="k">def</span> <span class="nf">me_ret_byteCode_SVrL</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">         Возвращает результирующий байт код для ВМ </span>
+<span class="sd">    &quot;&quot;&quot;</span>      
+    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span></div>
+ <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+     <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">          Возвращает строковое представление обьекта компилятора</span>
+<span class="sd">     &quot;&quot;&quot;</span>     
+     <span class="k">return</span> <span class="s2">&quot;func_table:&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_dict_str_int_funcTable</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">mas_I_Or_Str:&quot;</span><span class="o">+</span>\
+      <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">vector&lt;int&gt;_b_c:&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_mas_I_byteCode</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">start_ip:&quot;</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fi_int_startIp</span><span class="p">)</span>    </div>
+     
+        
+<div class="viewcode-block" id="read"><a class="viewcode-back" href="../s_expr_compiler.html#s_expr_compiler.read">[документация]</a><span class="k">def</span> <span class="nf">read</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Читает lisp подобное выражение из строки и лексемазирует его </span>
+<span class="sd">    &quot;&quot;&quot;</span>     
+    <span class="k">return</span> <span class="n">read_from</span><span class="p">(</span><span class="n">tokenize</span><span class="p">(</span><span class="n">s</span><span class="p">))</span></div>
+ 
+<div class="viewcode-block" id="tokenize"><a class="viewcode-back" href="../s_expr_compiler.html#s_expr_compiler.tokenize">[документация]</a><span class="k">def</span> <span class="nf">tokenize</span><span class="p">(</span><span class="n">s</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">         Ковертирует строку в питон список токенов</span>
+<span class="sd">    &quot;&quot;&quot;</span>    
+    <span class="k">return</span> <span class="n">s</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;(&#39;</span><span class="p">,</span><span class="s1">&#39; ( &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s1">&#39;)&#39;</span><span class="p">,</span><span class="s1">&#39; ) &#39;</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">()</span></div>
+ 
+<div class="viewcode-block" id="read_from"><a class="viewcode-back" href="../s_expr_compiler.html#s_expr_compiler.read_from">[документация]</a><span class="k">def</span> <span class="nf">read_from</span><span class="p">(</span><span class="n">tokens</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Читает выражение,создает &#39;атомы&#39; - float или строки</span>
+<span class="sd">    &quot;&quot;&quot;</span>    
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">tokens</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SyntaxError</span><span class="p">(</span><span class="s1">&#39;unexpected EOF while reading&#39;</span><span class="p">)</span>
+    <span class="n">token</span> <span class="o">=</span> <span class="n">tokens</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="s1">&#39;(&#39;</span> <span class="o">==</span> <span class="n">token</span><span class="p">:</span>
+        <span class="n">L</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">while</span> <span class="n">tokens</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s1">&#39;)&#39;</span><span class="p">:</span>
+            <span class="n">L</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">read_from</span><span class="p">(</span><span class="n">tokens</span><span class="p">))</span>
+        <span class="n">tokens</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># pop off &#39;)&#39;</span>
+        <span class="k">return</span> <span class="n">L</span>
+    <span class="k">elif</span> <span class="s1">&#39;)&#39;</span> <span class="o">==</span> <span class="n">token</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">SyntaxError</span><span class="p">(</span><span class="s1">&#39;unexpected )&#39;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">atom</span><span class="p">(</span><span class="n">token</span><span class="p">)</span></div>
+ 
+<div class="viewcode-block" id="atom"><a class="viewcode-back" href="../s_expr_compiler.html#s_expr_compiler.atom">[документация]</a><span class="k">def</span> <span class="nf">atom</span><span class="p">(</span><span class="n">token</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">       Числа становятся числами float , остальное символами,строками </span>
+<span class="sd">    &quot;&quot;&quot;</span>    
+    <span class="k">try</span><span class="p">:</span> <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span> <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">token</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">Symbol</span><span class="p">(</span><span class="n">token</span><span class="p">)</span></div>
+
+
+ 
+
+<span class="c1">#str_fileName=sys.argv[1]</span>
+<span class="n">str_fileName</span><span class="o">=</span><span class="s1">&#39;./code_Arifm.lisp&#39;</span> 
+<span class="n">fileDescr</span><span class="o">=</span><span class="nb">open</span><span class="p">(</span><span class="n">str_fileName</span><span class="p">,</span><span class="s2">&quot;r&quot;</span><span class="p">)</span>
+<span class="n">obj_LispMach</span><span class="o">=</span><span class="n">LispMach</span><span class="p">()</span>
+<span class="n">str_textProgram</span><span class="o">=</span><span class="n">fileDescr</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">str_textProgram</span><span class="p">)</span>
+<span class="n">obj_LispMach</span><span class="o">.</span><span class="n">me_recurs_evalPerList_SMrV</span><span class="p">(</span><span class="n">read</span><span class="p">(</span><span class="n">str_textProgram</span><span class="p">))</span>
+<span class="n">vectorKintK_opCode</span><span class="o">=</span><span class="n">obj_LispMach</span><span class="o">.</span><span class="n">me_ret_byteCode_SVrL</span><span class="p">()</span>
+<span class="n">vectorKintK_opCode</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">HALT</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">obj_LispMach</span><span class="p">)</span>
+<span class="c1">#obj_vm=Vm(vectorKintK_opCode,10,trace=True)</span>
+<span class="c1">#obj_vm.exec_(obj_LispMach.pole_int_startIp)</span>
+<span class="n">float_retVal</span><span class="o">=</span><span class="n">vt</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">vectorKintK_opCode</span><span class="p">,</span><span class="n">obj_LispMach</span><span class="o">.</span><span class="n">fi_int_startIp</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span> 
+<span class="nb">print</span><span class="p">(</span><span class="n">float_retVal</span><span class="p">)</span>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../index.html">UkuvchiDoc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Навигация</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../author.html">Автор</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pro.html">Проект язык программирования Ukuvchi(узб.-ученик)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../steck.html">В общем о стеке</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../tabl_loc.html">В общем о таблице локальных переменных</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../bytecode.html">Байт-код для компилятора и интерпритатора байт-кода(виртуальной машины)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">source</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../index.html">Documentation overview</a><ul>
+  <li><a href="index.html">Код модуля</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Быстрый поиск</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Искать" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Muhamedjanov K.K.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

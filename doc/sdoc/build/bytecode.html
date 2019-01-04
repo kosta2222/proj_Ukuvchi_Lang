@@ -1,0 +1,143 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" lang="ru">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Байт-код для компилятора и интерпритатора байт-кода(виртуальной машины) &#8212; Документация UkuvchiDoc </title>
+    <link rel="stylesheet" href="_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/translations.js"></script>
+    <link rel="index" title="Алфавитный указатель" href="genindex.html" />
+    <link rel="search" title="Поиск" href="search.html" />
+    <link rel="prev" title="Проект язык программирования Ukuvchi(узб.-ученик)" href="pro.html" />
+   
+  <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <div class="section" id="id1">
+<h1>Байт-код для компилятора и интерпритатора байт-кода(виртуальной машины)<a class="headerlink" href="#id1" title="Ссылка на этот заголовок">¶</a></h1>
+<dl class="docutils">
+<dt>Выражен так:</dt>
+<dd><div class="first last highlight-python notranslate"><div class="highlight"><pre><span></span><span class="p">(</span><span class="n">NOOP</span>    <span class="p">,</span>  <span class="c1"># нет операций - pass</span>
+<span class="n">IADD</span>    <span class="p">,</span>  <span class="c1"># сложение</span>
+<span class="n">ISUB</span>    <span class="p">,</span>  <span class="c1"># вычитание</span>
+<span class="n">IMUL</span>    <span class="p">,</span>  <span class="c1"># умножение</span>
+<span class="n">IDIV</span>    <span class="p">,</span>  <span class="c1"># деление</span>
+<span class="n">IREM</span>    <span class="p">,</span>  <span class="c1"># остаток от деления</span>
+<span class="n">IPOW</span>    <span class="p">,</span>  <span class="c1"># возведение в степень</span>
+<span class="n">ILT</span>     <span class="p">,</span>  <span class="c1"># сравнить на менше</span>
+<span class="n">IEQ</span>     <span class="p">,</span>  <span class="c1"># сравнить на равенство</span>
+<span class="n">BR</span>      <span class="p">,</span>  <span class="c1"># прыжок</span>
+<span class="n">BRT</span>     <span class="p">,</span>  <span class="c1"># прыжок при правде</span>
+<span class="n">BRF</span>     <span class="p">,</span>  <span class="c1"># прыжок при неправде</span>
+<span class="n">ICONST</span>  <span class="p">,</span>  <span class="c1"># положить константу на стек</span>
+<span class="n">LOAD</span>    <span class="p">,</span>  <span class="c1"># загрузить из таблицы локальных переменных на стек</span>
+<span class="n">GLOAD</span>   <span class="p">,</span>  <span class="c1"># загрузить из таблицы глобальных переменнных на стек</span>
+<span class="n">STORE</span>   <span class="p">,</span>  <span class="c1"># сохранить со стека в лакальные переменные</span>
+<span class="n">GSTORE</span>  <span class="p">,</span>  <span class="c1"># сохранить со стек в глобальные переменные</span>
+<span class="n">PRINT</span>   <span class="p">,</span>  <span class="c1"># печатает локальную переменную</span>
+<span class="n">POP</span>     <span class="p">,</span>  <span class="c1"># убирает вершину стека</span>
+<span class="n">CALL</span>    <span class="p">,</span>  <span class="c1"># вызывает функцию с nargs-количество аргументов:int и сколько переменных-фактических параметров ожидать на стеке:int</span>
+<span class="n">RET</span>     <span class="p">,</span>  <span class="c1"># завершает функцию</span>
+<span class="n">STORE_RESULT</span><span class="p">,</span> <span class="c1"># сохранить результат функции специальный регистр</span>
+<span class="n">LOAD_RESULT</span><span class="p">,</span>  <span class="c1"># загрузить результат прошлой функции из специального регистра на стек</span>
+<span class="n">HALT</span>          <span class="c1"># остановит виртуальную машину</span>
+<span class="p">)</span><span class="o">=</span><span class="nb">range</span><span class="p">(</span><span class="mi">24</span><span class="p">)</span>
+</pre></div>
+</div>
+</dd>
+</dl>
+</div>
+
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="index.html">UkuvchiDoc</a></h1>
+
+
+
+
+
+
+
+
+<h3>Навигация</h3>
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="author.html">Автор</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pro.html">Проект язык программирования Ukuvchi(узб.-ученик)</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Байт-код для компилятора и интерпритатора байт-кода(виртуальной машины)</a></li>
+</ul>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="index.html">Documentation overview</a><ul>
+      <li>Previous: <a href="pro.html" title="предыдущая глава">Проект язык программирования Ukuvchi(узб.-ученик)</a></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Быстрый поиск</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Искать" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Muhamedjanov K.K.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+      |
+      <a href="_sources/bytecode.rst.txt"
+          rel="nofollow">Page source</a>
+    </div>
+
+    
+
+    
+  </body>
+</html>
