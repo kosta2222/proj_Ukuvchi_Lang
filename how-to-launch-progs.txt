@@ -1,0 +1,2 @@
+// тестировался для Python3.6.3
+<path>/python.exe S_compiler.py ./tests_CompilAndIntpretBc/code_Arifm.lisp
