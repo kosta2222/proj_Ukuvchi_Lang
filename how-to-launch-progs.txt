@@ -1,2 +1,2 @@
-// тестировался для Python3.6.3
+// С‚РµСЃС‚РёСЂРѕРІР°Р»СЃСЏ РґР»СЏ Python3.6.3
 <path>/python.exe S_compiler.py ./tests_CompilAndIntpretBc/code_Arifm.lisp

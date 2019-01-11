@@ -10,6 +10,13 @@
 
 Тесты в папке tests_CompilAndIntpretBc
 
+S_compiler.py - интерпритатор на C VM
+S_compiler_py - интерпритатор на Python VM
+
+Как запускать:
+<path>/python.exe S_compiler.py ./tests_CompilAndIntpretBc/code_Arifm.lisp
+
+
 Copyright (C) 2018 Muhamedjanov K.K
  
    Permission to use, copy, modify, and/or distribute this software for any
