@@ -16,6 +16,10 @@ S_compiler_py - интерпритатор на Python VM
 Как запускать:
 <path>/python.exe S_compiler.py ./tests_CompilAndIntpretBc/code_Arifm.lisp
 
+Виртуальная машина на C:
+[BSD license]
+Copyright (c) 2014, Terence Parr
+All rights reserved.
 
 Copyright (C) 2018 Muhamedjanov K.K
  
