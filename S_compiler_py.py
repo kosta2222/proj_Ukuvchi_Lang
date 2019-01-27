@@ -25,7 +25,7 @@
                         Str - String.
 
 """
-import libTestPydModuleFloat as vt
+#import libTestPydModuleFloat as vt
 from struct import pack,unpack
 (   NOOP    ,
     IADD    , 
