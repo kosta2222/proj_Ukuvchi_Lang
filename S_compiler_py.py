@@ -396,7 +396,7 @@ def func_vmPrintInstr_SvectorKintKIrV(vectorKintK_opCode, int_ip) :
              print("%d:  %s\n"%( int_ip,listKstrYintK_instr[0] ));
         
             elif (int_nargs==1 and int_opcode!=ICONST) :
-             print("%d:  %s %f\n" %(int_ip, listKstrYintK_instr[0],vectorKintK_opCode[int_ip+1]) )
+             print("%d:  %s %d\n" %(int_ip, listKstrYintK_instr[0],vectorKintK_opCode[int_ip+1]) )
             elif (int_nargs==1 and int_opcode==ICONST):
              bytearray_bAr=bytearray([vectorKintK_opCode[int_ip+1],vectorKintK_opCode[int_ip+2],vectorKintK_opCode[int_ip+3],vectorKintK_opCode[int_ip+4]])
              print("ICONST",unpack('>f',bytearray_bAr)[0])       
@@ -524,15 +524,15 @@ class Vm:
             addr=self.code[self.ip]
             if self.steck[self.sp]==TRUE:
               self.ip=addr
-            self.sp-=1 
-            continue  
+              self.sp-=1 
+              continue  
         elif opcode==BRF:
             self.ip+=1
             addr=self.code[self.ip]
             if self.steck[self.sp]==FALSE:
               self.ip=addr
-            self.sp-=1 
-            continue
+              self.sp-=1 
+              continue
         elif opcode==IADD:
             b=self.steck[self.sp]
             self.sp-=1
@@ -625,7 +625,7 @@ class Vm:
              classContext_curContext.locals_[i]=self.steck[I_firstarg+i]
              self.sp-=I_nargs
              self.ip=I_findex
-             continue
+            continue
         elif opcode==RET:
             self.ip=self.pole_vectorKclassContextK_funcCont[I_callSp].returnIp
             I_callSp-=1
