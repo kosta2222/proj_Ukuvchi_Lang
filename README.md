@@ -10,8 +10,8 @@
 
 Тесты в папке tests_CompilAndIntpretBc
 
-S_compiler.py - интерпритатор на C VM
-S_compiler_py - интерпритатор на Python VM
+S_compiler.py - транслятор на Py, подгружает C Vm.
+S_compiler_py - транслятор на Py вместе с Py Vm.
 
 Как запускать:
 <path>/python.exe S_compiler.py ./tests_CompilAndIntpretBc/code_Arifm.lisp
