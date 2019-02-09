@@ -25,7 +25,7 @@
                         Str - String.
 
 """
-import libTestPydModuleFloat as vt# Это VM
+import libTestPydModuleFloat as vt
 from struct import pack,unpack
 (   NOOP    ,
     IADD    , 
@@ -125,7 +125,7 @@ def floatToBytes_SfloatRbytes(float_val):
     """
         запаковать число как набор байт
     """    
-    return pack('>f',float_val)
+    return pack('<f',float_val)
 class LispMach:
  """
        Компилятор
@@ -140,7 +140,7 @@ class LispMach:
   self.fi_int_nargs=0
  def me_gen_byteCode_SIrV(self,int_command):
      """"
-          генерация байткода-int_command-опкод который нужно добавить для результирующего списка,для Vm
+          генерация байткода-int_command-опкод который нужно добавить для результирующего списка, для Vm
      """     
      self.fi_mas_I_byteCode.append(int_command)
  def me_recurs_evalPerList_SMrV(self,mas_I_Or_Str):
@@ -343,19 +343,21 @@ def atom(token):
             return Symbol(token)
 
 
- 
+
 
 str_fileName=sys.argv[1]
 #str_fileName='./code_Arifm.lisp' 
 fileDescr=open(str_fileName,"r")
 obj_LispMach=LispMach()
 str_textProgram=fileDescr.read()
-print(str_textProgram)
+
+#print(str_textProgram)
 obj_LispMach.me_recurs_evalPerList_SMrV(read(str_textProgram))
 vectorKintK_opCode=obj_LispMach.me_ret_byteCode_SVrL()
 vectorKintK_opCode.append(HALT)
+
 print(obj_LispMach)
-#obj_vm=Vm(vectorKintK_opCode,10,trace=True)
-#obj_vm.exec_(obj_LispMach.pole_int_startIp)
+
+
 float_retVal=vt.eval(vectorKintK_opCode,obj_LispMach.fi_int_startIp,0) 
 print(float_retVal)

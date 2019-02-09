@@ -1,6 +1,7 @@
 Проект язык программирования Ukuvchi(узб.-ученик)
+================================================
 
-08/12/2018
+***08/12/2018***
 Компилятор написан на Python3(тестировался на Python3.6.3)
 исходный текст идет в lisp подобном синтаксисе,идет интерпритация
 так называемых s(sybolic) выражений.Нет массивов,строк,структур и т.д.
@@ -10,18 +11,20 @@
 
 Тесты в папке tests_CompilAndIntpretBc
 
-S_compiler.py - интерпритатор на C VM
-S_compiler_py - интерпритатор на Python VM
+1. S_compiler.py - транслятор на Py, подгружает C Vm.
+2. S_compiler_py - транслятор на Py вместе с Py Vm.
 
-Как запускать:
-<path>/python.exe S_compiler.py ./tests_CompilAndIntpretBc/code_Arifm.lisp
+    Как запускать:
+    <path>/python.exe S_compiler.py ./tests_CompilAndIntpretBc/code_Arifm.lisp
 
-Виртуальная машина на C:
+### Виртуальная машина на C:
 [BSD license]
 Copyright (c) 2014, Terence Parr
 All rights reserved.
 
-Copyright (C) 2018 Muhamedjanov K.K
+[Ученик-картинка](https://github.com/kosta2222/proj_Ukuvchi_Lang/ukuvchi_logo.png)
+
+### Copyright (C) 2018 Muhamedjanov K.K
  
    Permission to use, copy, modify, and/or distribute this software for any
    purpose with or without fee is hereby granted, provided that the above
