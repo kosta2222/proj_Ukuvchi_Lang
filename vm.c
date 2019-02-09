@@ -353,7 +353,10 @@ vm_print_instr (unsigned char *code, int ip)
         {
           printf ("%04d:  %-10s%-10d", ip, inst->name, code[ip + 1]);
         }
+<<<<<<< HEAD
+=======
 
+>>>>>>> d99a5a9e69f2b23ba8040605d1793f399fce7e16
 
       break;
     case 2:
@@ -363,6 +366,16 @@ vm_print_instr (unsigned char *code, int ip)
       printf ("%04d:  %-10s%d,%d,%-6d", ip, inst->name, code[ip + 1], code[ip + 2], code[ip + 3]);
 
       break;
+<<<<<<< HEAD
+    case 2:
+      printf ("%04d:  %-10s%d,%10d", ip, inst->name, code[ip + 1], code[ip + 2]);
+      break;
+    case 3:
+      printf ("%04d:  %-10s%d,%d,%-6d", ip, inst->name, code[ip + 1], code[ip + 2], code[ip + 3]);
+
+      break;
+=======
+>>>>>>> d99a5a9e69f2b23ba8040605d1793f399fce7e16
     }
 }
 

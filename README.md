@@ -22,7 +22,7 @@
 Copyright (c) 2014, Terence Parr
 All rights reserved.
 
-[Ученик-картинка](https://github.com/kosta2222/proj_Ukuvchi_Lang/ukuvchi_logo.png)
+
 
 ### Copyright (C) 2018 Muhamedjanov K.K
  
