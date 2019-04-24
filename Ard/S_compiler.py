@@ -1,4 +1,3 @@
-#-*-coding: cp1251-*-
 """
    Считываем из консоли программу,
    компилируем ее, и после ввода буквы "E" отправляем 
@@ -92,17 +91,17 @@ def opn(str_code):
         @return список  постфиксного выражения
     """
 
-    int_ptr=0
+    item_i=0
     # Операндовый стек
     OperatStack=[]
     # Выходной список
     resOpn=[]
 
-    while (int_ptr<len(str_code)):
+    while (item_i<len(str_code)):
 
         # получить следующий член выражения  
-        v=str_code[int_ptr]
-        int_ptr+=1
+        v=str_code[item_i]
+        item_i+=1
         # определить тип члена
         if isa(v,int):
 
