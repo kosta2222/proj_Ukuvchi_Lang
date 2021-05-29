@@ -1,0 +1,285 @@
+// calculate arithmetic expression (we need spaces there and [ ] parents) and print var
+($ (set! my_var (arif 3 + 4 * 2 - [ 1 + 5 ]))
+(print (my_var)))
+Out:
+0 Iload_const 3.0
+2 Iload_const 4.0
+4 Iload_const 2.0
+6 Imult
+7 Iadd
+8 Iload_const 1.0
+10 Iload_const 5.0
+12 Iadd
+13 Isub
+14 Istore_name my_var
+16 Iload_name my_var
+18 Iprint
+PRINT ob: 5.0
+19 Istop  
+
+//===============================================================
+// support natural language like keywords for arifmetic and print
+// Поддержка естественного языка на русском
+// файл программы должен быть в кодировке cp1251
+//===============================================================
+
+($ (скажи (арифметика 2 + 3 * 4))
+
+Out:
+<First frame executing> <__main__.FrameObject object at 0x023483F0>
+0 Iload_const 2.0
+stack-> [ 2.0 ]
+2 Iload_const 7.0
+stack-> [ 2.0 ]
+stack-> [ 7.0 ]
+4 Iload_const 3.0
+stack-> [ 2.0 ]
+stack-> [ 7.0 ]
+stack-> [ 3.0 ]
+6 Imult
+stack-> [ 2.0 ]
+stack-> [ 21.0 ]
+7 Iadd
+stack-> [ 23.0 ]
+8 Iprint
+PRINT ob: 23.0
+stack-> [ 23.0 ]
+9 Istop
+stack-> [ 23.0 ]
+</frame executing>
+
+// Загрузка полезного нативного модуля(на Python-как класса и он должен совпадать с имнем файла т.е класс System и файла System.py)
+// и узнаем дату (без трассировки)
+($
+(загрузи Система как сессия) (вызови_встроенный сессия date)
+)
+
+Out:
+2021-05-29 20:32:54.483000
+
+
+//===============================================================
+// / support natural language like keywords for arifmetic and print
+// Поддержка естественного языка на русском
+// файл программы должен быть в кодировке cp1251
+//===============================================================
+
+
+// create float var without arif keyword and print it
+($ (set! fl_var (9)) (print (fl_var)))
+
+
+// print string
+($ (print |test_str))
+
+
+// we create string var via arif keyword (strings support concatination), string must trail with | symbol 
+// and _ instedof whitespace
+($ (set! my_str_var (arif |this_is_test_string_var)) (print (my_str_var)))
+Out:
+0 Iload_const this_is_test_string_var
+2 Istore_name my_str_var
+4 Iload_name my_str_var
+6 Iprint
+PRINT ob: this_is_test_string_var
+7 Istop
+
+
+// support line comment
+($(// line comment) 
+(set! fl_var 9) (print fl_var))
+
+
+// here we add 2 string and print var
+($ (set! my_str_var (arif |this_is_test_string_var + |_yes)) (print my_str_var))
+Out:
+0 Iload_const this_is_test_string_var
+2 Iload_const _yes
+4 Iadd
+5 Istore_name my_str_var
+7 Iload_name my_str_var
+9 Iprint
+PRINT ob: this_is_test_string_var_yes
+10 Istop
+
+// assign True or False value and print its inner str method 
+($ (set! a False) (print(invokenative a _str_ )))
+Out:
+0 Iload_const 0
+2 Istore_name a
+4 Iload_const 0
+6 Iload_name a
+8 Iinvokenativedynamic _str_
+10 Iprint
+PRINT ob: False
+11 Istop
+
+
+// invokenative arrbitrary  metod from inner float object with args , print top of stack
+($ (set! a 9) (print(invokenative a  minus (args 7 3))))
+
+// if method have no args we invokenative it witout arg keyword
+($ (set! a 7) (print(invokenativenative a _str_) ) 
+
+
+// print arrbitrary field from the object
+($ (set! fl_var 7)(print (getfield fl_var test)))
+
+
+// make list with arguments , print top of stack 
+($ (print(build_list(args 3 4 5))))
+Out:
+0 Iload_const 3.0
+2 Iload_const 4.0
+4 Iload_const 5.0
+6 Iload_const 3.0
+8 Ibuild_list
+9 Iprint
+PRINT ob: 3.0 4.0 5.0
+10 Istop
+
+
+// make list and append 9 to the end of it, print it
+($ (set! my_list(build_list(args 2 4 5))) 
+   (invokenative my_list append (args 9))
+   (print my_list)
+)
+Out:
+0 Iload_const 2.0
+2 Iload_const 4.0
+4 Iload_const 5.0
+6 Iload_const 3.0
+8 Ibuild_list
+9 Istore_name my_list
+11 Iload_const 9.0
+13 Iload_const 1.0
+15 Iload_name my_list
+17 Iinvokenativedynamic append
+num_meth_args 1
+19 Iload_name my_list
+21 Iprint
+PRINT ob: 2.0 4.0 5.0 9.0
+22 Istop
+
+// take item of array by index and print it
+($
+(set! my_l(build_list(args 3 4 5)))
+(print (arr_take_index my_l 2))
+)
+Out:
+0 Iload_const 3.0
+2 Iload_const 4.0
+4 Iload_const 5.0
+6 Iload_const 3
+8 Ibuild_list
+9 Istore_name my_l
+11 Iload_const 2.0
+13 Iload_name my_l
+15 Ioaload
+16 Iprint
+PRINT ob: 5.0
+17 Istop
+
+
+// assign array by index
+($
+(set! my_l(build_list(args 3 4 5)))
+(arr_assign_index my_l 0 10)
+(print my_l)
+ )
+Out:
+0 Iload_const 3.0
+2 Iload_const 4.0
+4 Iload_const 5.0
+6 Iload_const 3
+8 Ibuild_list
+9 Istore_name my_l
+11 Iload_const 10.0
+13 Iload_const 0.0
+15 Iload_name my_l
+17 Ioastore
+18 Iload_name my_l
+20 Iprint
+PRINT ob: 10.0 4.0 5.0
+21 Istop
+
+//=========================
+// Not correct
+//=========================
+// call function
+($ (set! my_func (defun (params x) ((print |hi!) (return 1)) ) ) (call my_func (args 1)) ) 
+Out:
+<First frame executing> <__main__.FrameObject object at 0x00C37470>
+0 Iload_const
+<code_obj>
+co_name: <func>
+co_argcount: 0
+co_consts: |hi! 1.0
+co_names: []
+co_varnames: []
+co_code: [1, 0, 10, 1, 1, 16, 7]</code_obj>
+
+stack-> [
+<code_obj>
+co_name: <func>
+co_argcount: 0
+co_consts: |hi! 1.0
+co_names: []
+co_varnames: []
+co_code: [1, 0, 10, 1, 1, 16, 7]</code_obj>
+ ]
+2 Iload_const x
+stack-> [
+<code_obj>
+co_name: <func>
+co_argcount: 0
+co_consts: |hi! 1.0
+co_names: []
+co_varnames: []
+co_code: [1, 0, 10, 1, 1, 16, 7]</code_obj>
+ ]
+stack-> [ x ]
+4 Iload_const 1
+stack-> [
+<code_obj>
+co_name: <func>
+co_argcount: 0
+co_consts: |hi! 1.0
+co_names: []
+co_varnames: []
+co_code: [1, 0, 10, 1, 1, 16, 7]</code_obj>
+ ]
+stack-> [ x ]
+stack-> [ 1 ]
+6 Imake_function
+stack-> [ <__main__.FuncObject object at 0x00C37610> ]
+7 Istore_name my_func
+9 Iload_name my_func
+stack-> [ <__main__.FuncObject object at 0x00C37610> ]
+11 Iload_const 1.0
+stack-> [ <__main__.FuncObject object at 0x00C37610> ]
+stack-> [ 1.0 ]
+13 Iload_const 1
+stack-> [ <__main__.FuncObject object at 0x00C37610> ]
+stack-> [ 1.0 ]
+stack-> [ 1 ]
+15 Icall_function
+<New frame executing> <__main__.FrameObject object at 0x00C37650>
+0 Iload_const |hi!
+stack-> [ |hi! ]
+2 Iprint
+PRINT ob: |hi!
+stack-> [ |hi! ]
+3 Iload_const 1.0
+stack-> [ |hi! ]
+stack-> [ 1.0 ]
+5 Ireturn_value
+stack-> [ |hi! ]
+6 Istop
+stack-> [ |hi! ]
+</frame executing>
+stack-> [ 1.0 ]
+</frame executing>
+//=========================
+// /Not correct
+//=========================
