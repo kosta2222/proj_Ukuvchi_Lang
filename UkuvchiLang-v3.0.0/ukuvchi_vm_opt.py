@@ -538,7 +538,7 @@ class Vm:
 # Программа
 # *******************************************************
 c = None
-with open('src.lisp', 'r') as f:
+with open('src.lisp', 'r', encoding='utf8') as f:
     s = f.read()
     c = read(s)
 

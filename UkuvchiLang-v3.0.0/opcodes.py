@@ -5,14 +5,6 @@
     Idiv,  # 4
     Isub,  # 5
     Inop,  # 6
-    # Irem,  # 7
-    # Ipow,  # 8
-    # BR,  # 9
-    # BRT,  # 10
-    # BRF,  # 11
-    # ICONST,  # 12
-    # LOAD,  # 13
-    # GLOAD,  # 14
     Istop, #7
     Iload_name, # 8
     Iloadfield, # 9
