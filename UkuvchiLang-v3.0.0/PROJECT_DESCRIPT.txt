@@ -66,7 +66,7 @@ Out:
 
 
 // create float var without arif keyword and print it
-($ (set! fl_var (9)) (print (fl_var)))
+($ (set! fl_var 9) (print fl_var))
 
 
 // print string
@@ -75,7 +75,7 @@ Out:
 
 // we create string var via arif keyword (strings support concatination), string must trail with | symbol 
 // and _ instedof whitespace
-($ (set! my_str_var (arif |this_is_test_string_var)) (print (my_str_var)))
+($ (set! my_str_var (arif |this_is_test_string_var)) (print my_str_var))
 Out:
 0 Iload_const this_is_test_string_var
 2 Istore_name my_str_var
