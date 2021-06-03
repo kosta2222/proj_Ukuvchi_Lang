@@ -106,7 +106,7 @@ class CodeObject(Object):
         super().__init__(type_, 0)
 
         self.co_name = ""  # name of function, for module it will be "<module>"
-        self.co_argcount = 0  # number of func parameters
+        self.co_arcount = 0  # number of func parameters
         self.co_consts = []  # diffrent types of consts to load on self.stack
         self.co_names = []  # gloabal string names
         self.co_varnames = []  # local string names
@@ -116,10 +116,17 @@ class CodeObject(Object):
     def __str__(self):
         co_const_vals = ''
         len_co_consts_vals = len(self.co_consts)
+        len_co_names_vals = len(self.co_names)
+        co_const_vals=''
+        co_names_vals=''
+        
         for i in range(len_co_consts_vals):
-            co_const_vals += str(self.co_consts[i].v)+' '
-        s = "\n<code_obj>\nco_name: {}\nco_argcount: {}\nco_consts: {}\nco_names: {}\nco_varnames: {}\nco_code: {}</code_obj>\n".format(
-            self.co_name, self.co_argcount, co_const_vals, self.co_names, self.co_varnames, self.co_code)
+            co_const_vals += str(self.co_consts[i].v) + ' '
+
+        for i in range(len_co_names_vals):
+            co_names_vals+=str(self.co_names[i].v) + ' '    
+        s = "\n<code_obj>\nco_name: {}\nco_arcount: {}\nco_consts: {}\nco_names: {}\nco_varnames: {}\nco_code: {}</code_obj>\n".format(
+            self.co_name, self.co_arcount, co_const_vals, co_names_vals, self.co_varnames, self.co_code)
         return s
 
 
@@ -225,9 +232,9 @@ class Compiller:
 
         self.byte_code = []
         self.startIp = 0
-        self.module_co = None  # object for class Code for global scope
-        self.gco_consts_ind = 0  # pointer to co_consts for global scope
-        self.gco_names_ind = 0  # pointer to co_names
+        self.object_co = None  # object for class Code for global scope
+        self.co_consts_ind = 0  # pointer to co_consts for global scope
+        self.co_names_ind = 0  # pointer to co_names
         self.co_consts_ind = 0  # pointer to co_consts for local scope
         self.co_names_ind = 0  # pointer to co_names for local scope
         self.args_count = 0  # args count(amount of args we pass)
@@ -236,7 +243,6 @@ class Compiller:
                          "arr_take_index", "arr_assign_index", "defun", "params", "вызови_встроенный", "загрузи", "как")  # constructions of language, we need it
         # to interpret var id properly
         self.func_co = None
-        self.module_co = None
         self.we_in_function = False  # determes if we in global scope or in local function
 
     def generate(self, int_command):
@@ -247,11 +253,12 @@ class Compiller:
 
         self.byte_code.append(int_command)
 
-    def compille(self, SExp):
+    def compille(self, SExp, object_co):
         """
            Parse nested and sequensed(maybe nested) lists by first word for generating
            byte-code
         """
+        self.object_co = object_co
 
         if self.trace:
             print('SExp', SExp)
@@ -259,88 +266,51 @@ class Compiller:
         # This are atoms of compiller
         # ----------------------------
         if isa(SExp, float):  # We got a float value
-
-            if not self.we_in_function:
-                self.module_co.co_code.append(Iload_const)
-                self.module_co.co_code.append(self.gco_consts_ind)
-                self.module_co.co_consts.append(
-                    ObjectFloat(SExp, FLOAT))
-                self.gco_consts_ind += 1
-            else:
-                self.func_co.co_code.append(Iload_const)
-                self.func_co.co_code.append(self.co_consts_ind)
-                self.func_co.co_consts.append(
-                    ObjectFloat(SExp, FLOAT))
-                self.co_consts_ind += 1
+            self.object_co.co_code.append(Iload_const)
+            self.object_co.co_code.append(self.co_consts_ind)
+            self.object_co.co_consts.append(
+                ObjectFloat(SExp, FLOAT))
+            self.co_consts_ind += 1
 
         elif SExp == 'True':  # We got a True value
+            self.object_co.co_code.append(Iload_const)
+            self.object_co.co_code.append(self.co_consts_ind)
+            self.object_co.co_consts.append(
+                ObjectBoolean(1, BOOLEAN))
+            self.co_consts_ind += 1
 
-            if not self.we_in_function:
-                self.module_co.co_code.append(Iload_const)
-                self.module_co.co_code.append(self.gco_consts_ind)
-                self.module_co.co_consts.append(
-                    ObjectBoolean(1, BOOLEAN))
-                self.gco_consts_ind += 1
         elif SExp == 'False':  # We got a True value
-
-            if not self.we_in_function:
-                self.module_co.co_code.append(Iload_const)
-                self.module_co.co_code.append(self.gco_consts_ind)
-                self.module_co.co_consts.append(
-                    ObjectBoolean(0, BOOLEAN))
-                self.gco_consts_ind += 1
+            self.object_co.co_code.append(Iload_const)
+            self.object_co.co_code.append(self.co_consts_ind)
+            self.object_co.co_consts.append(
+                ObjectBoolean(0, BOOLEAN))
+            self.co_consts_ind += 1
 
         elif SExp == 'None':  # We got a None value
+            self.object_co.co_code.append(Iload_const)
+            self.object_co.co_code.append(self.co_consts_ind)
+            self.object_co.co_consts.append(
+                ObjectNone(None, NONE))
+            self.co_consts_ind += 1
 
-            if not self.we_in_function:
-                self.module_co.co_code.append(Iload_const)
-                self.module_co.co_code.append(self.gco_consts_ind)
-                self.module_co.co_consts.append(
-                    ObjectNone(None, NONE))
-                self.gco_consts_ind += 1
-            else:
-                self.func_co.co_code.append(Iload_const)
-                self.func_co.co_code.append(self.co_consts_ind)
-                self.func_co.co_consts.append(
-                    ObjectNone(None, NONE))
-                self.co_consts_ind += 1
-
-        # We got a string as var id
-        elif isa(SExp, str) and SExp[0] != '|' and SExp not in self.keywords:
+        elif isa(SExp, str) and SExp[0] != '|' and SExp not in self.keywords:# We got a string as var id
             # not string as var or language keyword
-            if not self.we_in_function:
-                self.module_co.co_code.append(Iload_name)
-                self.module_co.co_code.append(self.gco_names_ind)
-                self.module_co.co_names.append(
-                    ObjectStr(SExp, STR))
-                self.gco_names_ind += 1
+            self.object_co.co_code.append(Iload_name)
+            self.object_co.co_code.append(self.co_names_ind)
+            self.object_co.co_names.append(
+                ObjectStr(SExp, STR))
+            self.co_names_ind += 1
 
-        # We got a string and not language keyword
-        elif isa(SExp, str) and SExp[0] == '|' and SExp not in self.keywords:
-            if not self.we_in_function:
-                self.module_co.co_code.append(Iload_const)
-                self.module_co.co_code.append(self.gco_consts_ind)
-                self.module_co.co_consts.append(
-                    ObjectStr(SExp, STR))
-                self.gco_consts_ind += 1
-            else:
-                self.func_co.co_code.append(Iload_const)
-                self.func_co.co_code.append(self.co_consts_ind)
-                self.func_co.co_consts.append(
-                    ObjectStr(SExp, STR))
-                self.co_consts_ind += 1
+        elif isa(SExp, str) and SExp[0] == '|' and SExp not in self.keywords:# We got a string and not language keyword
+            self.object_co.co_code.append(Iload_const)
+            self.object_co.co_code.append(self.co_consts_ind)
+            self.object_co.co_consts.append(
+                ObjectStr(SExp, STR))
+            self.co_consts_ind += 1
 
         elif SExp == 'как':
             pass
 
-        # elif SExp=='Система':  # We got a System value
-
-        #     if not self.we_in_function:
-        #         self.module_co.co_code.append(Iload_const)
-        #         self.module_co.co_code.append(self.gco_consts_ind)
-        #         self.module_co.co_consts.append(
-        #             ObjectSystem(NATIVE_CLASS))
-        #         self.gco_consts_ind += 1
         # -----------------------------
         # /This are atoms of compiller
         # -----------------------------
@@ -348,31 +318,34 @@ class Compiller:
         elif SExp[0] == 'args':
 
             for exp in SExp[1:]:
-                self.compille(exp)
+                self.compille(exp, object_co)
                 self.args_count += 1
 
-            self.module_co.co_code.append(Iload_const)
-            self.module_co.co_code.append(self.gco_consts_ind)
-            self.module_co.co_consts.append(
+            self.object_co.co_code.append(Iload_const)
+            self.object_co.co_code.append(self.co_consts_ind)
+            self.object_co.co_consts.append(
                 ObjectFloat(self.args_count, FLOAT))
-            self.gco_consts_ind += 1
+            self.co_consts_ind += 1
+
 
             self.args_count = 0
 
         elif SExp[0] == 'params':
             for i in SExp[1:]:
-                self.module_co.co_code.append(Iload_const)
-                self.module_co.co_code.append(self.gco_consts_ind)
-                self.module_co.co_consts.append(ObjectStr(i, STR))
-                self.gco_consts_ind += 1
+                self.object_co.co_code.append(Iload_const)
+                self.object_co.co_code.append(self.co_consts_ind)
+                self.object_co.co_consts.append(ObjectStr(i, STR))
+                self.co_consts_ind += 1
+
 
                 self.args_count += 1
 
-            self.module_co.co_code.append(Iload_const)
-            self.module_co.co_code.append(self.gco_consts_ind)
-            self.module_co.co_consts.append(
+            self.object_co.co_code.append(Iload_const)
+            self.object_co.co_code.append(self.co_consts_ind)
+            self.object_co.co_consts.append(
                 ObjectFloat(self.args_count, FLOAT))
-            self.gco_consts_ind += 1
+            self.co_consts_ind += 1
+
 
             self.args_count = 0
 
@@ -384,35 +357,33 @@ class Compiller:
 
             _, var_name, exp = SExp
 
-            self.compille(exp)
-            if not self.we_in_function:
-                self.module_co.co_code.append(Istore_name)
-                self.module_co.co_code.append(self.gco_names_ind)
-                self.module_co.co_names.append(ObjectStr(var_name, STR))
-                self.gco_names_ind += 1
-            else:
-                self.func_co.co_code.append(Istore_name)
-                self.func_co.co_code.append(self.co_names_ind)
-                self.func_co.co_names.append(ObjectStr(var_name, STR))
-                self.co_names_ind += 1
+            self.compille(exp, object_co)
+            self.object_co.co_code.append(Istore_name)
+            self.object_co.co_code.append(self.co_names_ind)
+            self.object_co.co_names.append(ObjectStr(var_name, STR))
+            self.co_names_ind += 1
+
         elif SExp[0] == 'import' or SExp[0] == 'загрузи':
             _, exp, _as, var_name = SExp
 
-            self.compille(_as)
+            self.compille(_as, object_co)
 
-            self.module_co.co_code.append(Iload_const)
-            self.module_co.co_code.append(self.gco_consts_ind)
-            self.module_co.co_consts.append(ObjectStr(var_name, STR))
-            self.gco_consts_ind += 1
+            self.object_co.co_code.append(Iload_const)
+            self.object_co.co_code.append(self.co_consts_ind)
+            self.object_co.co_consts.append(ObjectStr(var_name, STR))
+            self.co_consts_ind += 1
 
-            self.module_co.co_code.append(Iload_const)
-            self.module_co.co_code.append(self.gco_consts_ind)
+
+            self.object_co.co_code.append(Iload_const)
+            self.object_co.co_code.append(self.co_consts_ind)
+
             if exp == 'Система':
                 exp = 'System'
-            self.module_co.co_consts.append(ObjectStr(exp, STR))
-            self.gco_consts_ind += 1
+            self.object_co.co_consts.append(ObjectStr(exp, STR))
+            self.co_consts_ind += 1
 
-            self.module_co.co_code.append(Iimport_module_bname)
+
+            self.object_co.co_code.append(Iimport_module_bname)
 
         elif SExp[0] == '$':
             # Recursivly parse sequensed (maybe they contain nested lists) lists
@@ -422,10 +393,8 @@ class Compiller:
             ex($ (set! my_var 7) (print my_var) )
             """
 
-            self.module_co = CodeObject(CODE)
-            self.module_co.co_name = '<module>'
             for exp in SExp[1:]:
-                self.compille(exp)
+                self.compille(exp, object_co)
 
         elif SExp[0] == 'defun':
             """
@@ -438,24 +407,32 @@ class Compiller:
 
             _, params, body = SExp
 
-            self.we_in_function = True
+            func_co = CodeObject(CODE)
+            func_co.co_name = '<func>'
 
-            self.func_co = CodeObject(CODE)
-            self.func_co.co_name = '<func>'
+            save_main_co=self.object_co
+            save_co_consts_ind=self.co_consts_ind
+            save_co_names_ind=self.co_names_ind
+
+            self.co_consts_ind=0
+            self.co_names_ind=0
 
             for exp in body:  # parse body
-                self.compille(exp)
+                self.compille(exp, func_co)
 
-            self.we_in_function = False
+            self.object_co=save_main_co
 
-            self.module_co.co_code.append(Iload_const)
-            self.module_co.co_code.append(self.gco_consts_ind)
-            self.module_co.co_consts.append(self.func_co)
-            self.gco_consts_ind += 1
+            self.co_consts_ind=save_co_consts_ind
+            self.co_names_ind=save_co_names_ind
 
-            self.compille(params)  # parse params
+            self.object_co.co_code.append(Iload_const)
+            self.object_co.co_code.append(self.co_consts_ind)
+            self.object_co.co_consts.append(func_co)
+            self.co_consts_ind += 1
 
-            self.module_co.co_code.append(Imake_function)
+            self.compille(params, self.object_co)  # parse params
+
+            self.object_co.co_code.append(Imake_function)
 
         elif SExp[0] == 'arif' or SExp[0] == 'арифметика':  # It is arithmetic expression
 
@@ -472,140 +449,152 @@ class Compiller:
 
                     if i == "+":
 
-                        self.module_co.co_code.append(Iadd)
+                        self.object_co.co_code.append(Iadd)
                     if i == "-":
 
-                        self.module_co.co_code.append(Isub)
+                        self.object_co.co_code.append(Isub)
                     if i == "*":
 
-                        self.module_co.co_code.append(Imult)
+                        self.object_co.co_code.append(Imult)
                     if i == "/":
 
-                        self.module_co.co_code.append(Idiv)
+                        self.object_co.co_code.append(Idiv)
+                    """    
                     if i == "%":
 
-                        self.module_co.co_code.append(Irem)
+                        self.object_co.co_code.append(Irem)
                     if i == "^":
 
-                        self.module_co.co_code.append(Ipow)
+                        self.object_co.co_code.append(Ipow)
+                    """    
 
                 elif isa(i, float):   # We got a float value
-                    if not self.we_in_function:
-                        self.module_co.co_code.append(Iload_const)
-                        self.module_co.co_code.append(self.gco_consts_ind)
-                        self.module_co.co_consts.append(
-                            ObjectFloat(i, FLOAT))
-                        self.gco_consts_ind += 1
+                    self.object_co.co_code.append(Iload_const)
+                    self.object_co.co_code.append(self.co_consts_ind)
+                    self.object_co.co_consts.append(
+                        ObjectFloat(i, FLOAT))
+                    self.co_consts_ind += 1
+
                 elif isa(i, str) and i[0] == '|':  # We got a string
-                    if not self.we_in_function:
-                        self.module_co.co_code.append(Iload_const)
-                        self.module_co.co_code.append(self.gco_consts_ind)
-                        self.module_co.co_consts.append(
-                            ObjectStr(i[1:], STR))
-                        self.gco_consts_ind += 1
+                    self.object_co.co_code.append(Iload_const)
+                    self.object_co.co_code.append(self.co_consts_ind)
+                    self.object_co.co_consts.append(
+                        ObjectStr(i[1:], STR))
+                    self.co_consts_ind += 1
+
                 elif isa(i, str) and i[0] != '|':  # We got a string as var id
-                    if not self.we_in_function:
-                        self.module_co.co_code.append(Iload_name)
-                        self.module_co.co_code.append(self.gco_names_ind)
-                        self.module_co.co_names.append(
-                            ObjectStr(i, STR))
-                        self.gco_names_ind += 1
+                    self.object_co.co_code.append(Iload_name)
+                    self.object_co.co_code.append(self.co_names_ind)
+                    self.object_co.co_names.append(
+                        ObjectStr(i, STR))
+                    self.co_names_ind += 1
+
         elif SExp[0] == 'getfield':
             _, obj_name, attr_name = SExp
-            self.compille(obj_name)
-            if not self.we_in_function:
-                self.module_co.co_code.append(Iloadfield)
-                self.module_co.co_code.append(self.gco_names_ind)
-                self.module_co.co_names.append(
-                    ObjectStr(attr_name, STR))
-                self.gco_names_ind += 1
+            self.compille(obj_name, object_co)
+            self.object_co.co_code.append(Iloadfield)
+            self.object_co.co_code.append(self.co_names_ind)
+            self.object_co.co_names.append(
+                ObjectStr(attr_name, STR))
+            self.co_names_ind += 1
+
+        # on self.stack must be  top(obj_name)->(num_args)->(arg)(arg)(arg)(...)
         elif SExp[0] == 'invokenative' or SExp[0] == 'вызови_встроенный':
             if len(SExp) == 4:  # if we have arguments to the func
                 _, obj_name, meth_name, args = SExp
-                # on self.stack must be  top(obj_name)->(num_args)->(arg)(arg)(arg)(...)
-                self.compille(args)
-                self.compille(obj_name)
+                
+                self.compille(args, object_co)
+                self.compille(obj_name, object_co)
 
             elif len(SExp) == 3:  # if we have no arguments to the func
                 _, obj_name, meth_name = SExp
-                self.module_co.co_code.append(Iload_const)
-                self.module_co.co_code.append(self.gco_consts_ind)
-                self.module_co.co_consts.append(ObjectFloat(0, FLOAT))
-                self.compille(obj_name)
+                self.object_co.co_code.append(Iload_const)
+                self.object_co.co_code.append(self.co_consts_ind)
+                self.object_co.co_consts.append(ObjectFloat(0, FLOAT))
+                self.compille(obj_name, object_co)
 
-            self.module_co.co_code.append(Iinvokenative)
-            self.module_co.co_code.append(self.gco_names_ind)
-            self.module_co.co_names.append(
+            self.object_co.co_code.append(Iinvokenative)
+            self.object_co.co_code.append(self.co_names_ind)
+            self.object_co.co_names.append(
                 ObjectStr(meth_name, STR))
-            self.gco_names_ind += 1
+            self.co_names_ind += 1
 
-        # use construction (args <arg> <arg> <arg> <...>)
+        # on self.stack must be  top(num_args)->(arg)(arg)(arg)(...)
         elif SExp[0] == 'build_list':
-            # on self.stack must be  top(num_args)->(arg)(arg)(arg)(...)
             _, args = SExp
-            self.compille(args)
-            self.module_co.co_code.append(Ibuild_list)
-        elif SExp[0] == 'arr_take_index':
-            # on self.stack must be  top(arrayref)->(index)
-            _, obj_array_name, index = SExp
-            self.compille(index)
-            self.compille(obj_array_name)
-            self.module_co.co_code.append(Ioaload)
+            self.compille(args, object_co)
+            self.object_co.co_code.append(Ibuild_list)
 
+        # on self.stack must be  top(arrayref)->(index)
+        elif SExp[0] == 'arr_take_index':
+            _, obj_array_name, index = SExp
+            self.compille(index, object_co)
+            self.compille(obj_array_name, object_co)
+            self.object_co.co_code.append(Ioaload)
+        
+        # on self.stack must be  top(arrayref)->(index)->(val)
         elif SExp[0] == 'arr_assign_index':
-            # on self.stack must be  top(arrayref)->(index)->(val)
             _, obj_array_name, index, val = SExp
-            self.compille(val)
-            self.compille(index)
-            self.compille(obj_array_name)
-            self.module_co.co_code.append(Ioastore)
+            self.compille(val, object_co)
+            self.compille(index, object_co)
+            self.compille(obj_array_name, object_co)
+            self.object_co.co_code.append(Ioastore)
+
         elif SExp[0] == 'return':
             _, val = SExp
-            self.compille(val)
-            self.func_co.co_code.append(Ireturn_value)
-            self.func_co.co_code.append(Istop)
+            self.compille(val, object_co)
+            self.object_co.co_code.append(Ireturn_value)
 
         elif SExp[0] == 'call':
             _, func_name, args = SExp
 
-            self.compille(func_name)
-            self.compille(args)
-            self.module_co.co_code.append(Icall_function)
+            self.compille(func_name, object_co)
+            self.compille(args, object_co)
+            self.object_co.co_code.append(Icall_function)
 
         elif SExp[0] == 'print' or SExp[0] == 'скажи':
             _, exp = SExp
-            self.compille(exp)
-            if not self.we_in_function:
-                self.module_co.co_code.append(Iprint)
-            else:
-                self.func_co.co_code.append(Iprint)
+            self.compille(exp, object_co)
+            self.object_co.co_code.append(Iprint)
 
+        elif SExp[0] == 'pass':  # ничего не делать
+
+            self.generate(Inop)
+
+        # //// Eq
         elif SExp[0] == '<':  # сравнить на меньше
 
             (_, list_arif1, list_arif2) = SExp
 
-            self.compille(list_arif1)
-            self.compille(list_arif2)
+            self.compille(list_arif1, object_co)
+            self.compille(list_arif2, object_co)
+            """
             self.generate(Ilt)
+            """
 
         elif SExp[0] == '=':  # сравнить на равенство
 
             (_, list_arif1, list_arif2) = SExp
 
-            self.compille(list_arif1)
-            self.compille(list_arif2)
+            self.compille(list_arif1, object_co)
+            self.compille(list_arif2, object_co)
+            """
             self.generate(Ieq)
+            """
 
+        # //// /Eq
+
+        # //// Control Flow
         elif SExp[0] == 'if':  # если
 
             (_, list_test, list_trueEpr, list_falseExpr) = SExp
 
-            self.compille(list_test)
+            self.compille(list_test, object_co)
             self.generate(BRF)
             self.generate(0)
             self.generate(0)
             nAddr0_1 = len(self.byte_code)
-            self.compille(list_trueEpr)
+            self.compille(list_trueEpr, object_co)
             self.generate(BR)
             self.generate(0)
             self.generate(0)
@@ -613,7 +602,7 @@ class Compiller:
             delta1 = nAddr1_2-nAddr0_1
             self.byte_code[nAddr0_1-2] = self.short2bytes(delta1)[0]
             self.byte_code[nAddr0_1-1] = self.short2bytes(delta1)[1]
-            self.compille(list_falseExpr)
+            self.compille(list_falseExpr, object_co)
             nAddr3_4 = len(self.byte_code)
             delta2 = (nAddr3_4-nAddr1_2)+2
             self.byte_code[nAddr1_2-2] = self.short2bytes(delta2)[0]
@@ -624,12 +613,12 @@ class Compiller:
             (_, list_test, list_whileBody) = SExp
 
             nAddr1_2 = len(self.byte_code)
-            self.compille(list_test)
+            self.compille(list_test, object_co)
             self.generate(BRF)
             self.generate(0)
             self.generate(0)
             nAddr0_1 = len(self.byte_code)
-            self.compille(list_whileBody)
+            self.compille(list_whileBody, object_co)
             self.generate(BR)
             self.generate(0)
             self.generate(0)
@@ -641,22 +630,38 @@ class Compiller:
             self.byte_code[nAddr2_3-2] = self.short2bytes(-delta2)[0]
             self.byte_code[nAddr2_3-1] = self.short2bytes(-delta2)[1]
 
-        elif SExp[0] == 'pass':  # ничего не делать
-
-            self.generate(Inop)
+        # //// /Control Flow
 
         else:  # ошибка компиляции
 
             raise Exception("Unknown function name:%s" % SExp[0])
 
+        return self.object_co
+
     def get_module_co_obj(self):
         """
              Возвращает результирующий байт код для ВМ
         """
-        self.module_co.co_code.append(Istop)
-        return self.module_co
+        self.object_co.co_code.append(Istop)
+        return self.object_co
 
 
 # --------------------------
 # /Compiller
 # --------------------------
+
+if __name__ == '__main__':
+   c = None
+   with open('src.lisp', 'r', encoding='utf8') as f:
+      s = f.read()
+      c = read(s)
+
+   compiller = Compiller(
+   # trace=False
+   )
+   object_co = CodeObject(CODE)
+   object_co.co_name = '<module>'
+   module_co_obj =compiller.compille(c, object_co)
+   print('mod info', module_co_obj)
+
+    

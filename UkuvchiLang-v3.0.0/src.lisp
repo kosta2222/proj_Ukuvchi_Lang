@@ -1,5 +1,1 @@
-($
-(//(скажи (арифметика  2 + 7 * 3)))
-(загрузи Система как сессия) (вызови_встроенный сессия date)
-
-)
+($ (set! my_func (defun (params x) ((print |hi!) (return (arif 3))) ) ) (set! c_var(call my_func (args None))) (print c_var)) 

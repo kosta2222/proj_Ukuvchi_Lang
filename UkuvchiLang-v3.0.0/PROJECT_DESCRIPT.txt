@@ -204,82 +204,365 @@ PRINT ob: 10.0 4.0 5.0
 21 Istop
 
 //=========================
-// Not correct
+// Func
 //=========================
 // call function
-($ (set! my_func (defun (params x) ((print |hi!) (return 1)) ) ) (call my_func (args 1)) ) 
+1) ($ (set! my_func (defun (params x) ((print |hi!) (return 3)) ) ) (set! c_var(call my_func (args 1))) (print c_var)) 
+
 Out:
-<First frame executing> <__main__.FrameObject object at 0x00C37470>
+<First frame executing> Frame str sp: -1 f_globals: {} f_locals: {} pc: 0 ret val None
 0 Iload_const
 <code_obj>
 co_name: <func>
-co_argcount: 0
-co_consts: |hi! 1.0
-co_names: []
+co_arcount: 0
+co_consts: |hi! 3.0
+co_names:
 co_varnames: []
-co_code: [1, 0, 10, 1, 1, 16, 7]</code_obj>
+co_code: [1, 0, 10, 1, 1, 16]</code_obj>
 
-stack-> [
+stack->
+[
 <code_obj>
 co_name: <func>
-co_argcount: 0
-co_consts: |hi! 1.0
-co_names: []
+co_arcount: 0
+co_consts: |hi! 3.0
+co_names:
 co_varnames: []
-co_code: [1, 0, 10, 1, 1, 16, 7]</code_obj>
+co_code: [1, 0, 10, 1, 1, 16]</code_obj>
  ]
 2 Iload_const x
-stack-> [
+stack->
+[ x ]
+[
 <code_obj>
 co_name: <func>
-co_argcount: 0
-co_consts: |hi! 1.0
-co_names: []
+co_arcount: 0
+co_consts: |hi! 3.0
+co_names:
 co_varnames: []
-co_code: [1, 0, 10, 1, 1, 16, 7]</code_obj>
+co_code: [1, 0, 10, 1, 1, 16]</code_obj>
  ]
-stack-> [ x ]
 4 Iload_const 1
-stack-> [
+stack->
+[ 1 ]
+[ x ]
+[
 <code_obj>
 co_name: <func>
-co_argcount: 0
-co_consts: |hi! 1.0
-co_names: []
+co_arcount: 0
+co_consts: |hi! 3.0
+co_names:
 co_varnames: []
-co_code: [1, 0, 10, 1, 1, 16, 7]</code_obj>
+co_code: [1, 0, 10, 1, 1, 16]</code_obj>
  ]
-stack-> [ x ]
-stack-> [ 1 ]
 6 Imake_function
-stack-> [ <__main__.FuncObject object at 0x00C37610> ]
+stack->
+[ 1 ]
+[ x ]
+[ <__main__.FuncObject object at 0x0117A750> ]
 7 Istore_name my_func
+stack->
+[ 1 ]
+[ x ]
+[ <__main__.FuncObject object at 0x0117A750> ]
 9 Iload_name my_func
-stack-> [ <__main__.FuncObject object at 0x00C37610> ]
+stack->
+[ 1 ]
+[ x ]
+[ <__main__.FuncObject object at 0x0117A750> ]
 11 Iload_const 1.0
-stack-> [ <__main__.FuncObject object at 0x00C37610> ]
-stack-> [ 1.0 ]
+stack->
+[ 1 ]
+[ 1.0 ]
+[ <__main__.FuncObject object at 0x0117A750> ]
 13 Iload_const 1
-stack-> [ <__main__.FuncObject object at 0x00C37610> ]
-stack-> [ 1.0 ]
-stack-> [ 1 ]
+stack->
+[ 1 ]
+[ 1.0 ]
+[ <__main__.FuncObject object at 0x0117A750> ]
 15 Icall_function
-<New frame executing> <__main__.FrameObject object at 0x00C37650>
+<New frame executing> Frame str sp: -1 f_globals: {} f_locals: {'x': <compil.ObjectFloat object at 0x0117A6F0>} pc: 0 ret val None
 0 Iload_const |hi!
-stack-> [ |hi! ]
+stack->
+[ |hi! ]
 2 Iprint
 PRINT ob: |hi!
-stack-> [ |hi! ]
-3 Iload_const 1.0
-stack-> [ |hi! ]
-stack-> [ 1.0 ]
+stack->
+[ |hi! ]
+3 Iload_const 3.0
+stack->
+[ 3.0 ]
 5 Ireturn_value
-stack-> [ |hi! ]
-6 Istop
-stack-> [ |hi! ]
+stack->
+[ 3.0 ]
 </frame executing>
-stack-> [ 1.0 ]
+stack->
+[ 1 ]
+[ 1.0 ]
+[ 3.0 ]
+16 Istore_name c_var
+stack->
+[ 1 ]
+[ 1.0 ]
+[ 3.0 ]
+18 Iload_name c_var
+stack->
+[ 1 ]
+[ 1.0 ]
+[ 3.0 ]
+20 Iprint
+PRINT ob: 3.0
+stack->
+[ 1 ]
+[ 1.0 ]
+[ 3.0 ]
+21 Istop
+stack->
+[ 1 ]
+[ 1.0 ]
+[ 3.0 ]
+</frame executing>
+
+($ (set! my_func (defun (params x) ((print |hi!) (return (arif x + 3))) ) ) (set! c_var(call my_func (args 1))) (print c_var))
+
+Out:
+0 Iload_const
+<code_obj>
+co_name: <func>
+co_arcount: 0
+co_consts: |hi! 3.0
+co_names: x
+co_varnames: []
+co_code: [1, 0, 10, 8, 0, 1, 1, 2, 16]</code_obj>
+
+stack->
+[
+<code_obj>
+co_name: <func>
+co_arcount: 0
+co_consts: |hi! 3.0
+co_names: x
+co_varnames: []
+co_code: [1, 0, 10, 8, 0, 1, 1, 2, 16]</code_obj>
+ ]
+2 Iload_const x
+stack->
+[ x ]
+[
+<code_obj>
+co_name: <func>
+co_arcount: 0
+co_consts: |hi! 3.0
+co_names: x
+co_varnames: []
+co_code: [1, 0, 10, 8, 0, 1, 1, 2, 16]</code_obj>
+ ]
+4 Iload_const 1
+stack->
+[ 1 ]
+[ x ]
+[
+<code_obj>
+co_name: <func>
+co_arcount: 0
+co_consts: |hi! 3.0
+co_names: x
+co_varnames: []
+co_code: [1, 0, 10, 8, 0, 1, 1, 2, 16]</code_obj>
+ ]
+6 Imake_function
+stack->
+[ 1 ]
+[ x ]
+[ <__main__.FuncObject object at 0x00DEA770> ]
+7 Istore_name my_func
+stack->
+[ 1 ]
+[ x ]
+[ <__main__.FuncObject object at 0x00DEA770> ]
+9 Iload_name my_func
+stack->
+[ 1 ]
+[ x ]
+[ <__main__.FuncObject object at 0x00DEA770> ]
+11 Iload_const 1.0
+stack->
+[ 1 ]
+[ 1.0 ]
+[ <__main__.FuncObject object at 0x00DEA770> ]
+13 Iload_const 1
+stack->
+[ 1 ]
+[ 1.0 ]
+[ <__main__.FuncObject object at 0x00DEA770> ]
+15 Icall_function
+<New frame executing> Frame str sp: -1 f_globals: {} f_locals: {'x': <compil.ObjectFloat object at 0x00DEA6B0>} pc: 0 ret val None
+0 Iload_const |hi!
+stack->
+[ |hi! ]
+2 Iprint
+PRINT ob: |hi!
+stack->
+[ |hi! ]
+3 Iload_name x
+stack->
+[ 1.0 ]
+5 Iload_const 3.0
+stack->
+[ 3.0 ]
+[ 1.0 ]
+7 Iadd
+stack->
+[ 3.0 ]
+[ 4.0 ]
+8 Ireturn_value
+stack->
+[ 3.0 ]
+[ 4.0 ]
+</frame executing>
+stack->
+[ 1 ]
+[ 1.0 ]
+[ 4.0 ]
+16 Istore_name c_var
+stack->
+[ 1 ]
+[ 1.0 ]
+[ 4.0 ]
+18 Iload_name c_var
+stack->
+[ 1 ]
+[ 1.0 ]
+[ 4.0 ]
+20 Iprint
+PRINT ob: 4.0
+stack->
+[ 1 ]
+[ 1.0 ]
+[ 4.0 ]
+21 Istop
+stack->
+[ 1 ]
+[ 1.0 ]
+[ 4.0 ]
+</frame executing> 
+
+2) pass None arg
+($ (set! my_func (defun (params x) ((print |hi!) (return (arif 3))) ) ) (set! c_var(call my_func (args None))) (print c_var))
+
+Out:
+<First frame executing> Frame str sp: -1 f_globals: {} f_locals: {} pc: 0 ret val None
+0 Iload_const
+<code_obj>
+co_name: <func>
+co_arcount: 0
+co_consts: |hi! 3.0
+co_names:
+co_varnames: []
+co_code: [1, 0, 10, 1, 1, 16]</code_obj>
+
+stack->
+[
+<code_obj>
+co_name: <func>
+co_arcount: 0
+co_consts: |hi! 3.0
+co_names:
+co_varnames: []
+co_code: [1, 0, 10, 1, 1, 16]</code_obj>
+ ]
+2 Iload_const x
+stack->
+[ x ]
+[
+<code_obj>
+co_name: <func>
+co_arcount: 0
+co_consts: |hi! 3.0
+co_names:
+co_varnames: []
+co_code: [1, 0, 10, 1, 1, 16]</code_obj>
+ ]
+4 Iload_const 1
+stack->
+[ 1 ]
+[ x ]
+[
+<code_obj>
+co_name: <func>
+co_arcount: 0
+co_consts: |hi! 3.0
+co_names:
+co_varnames: []
+co_code: [1, 0, 10, 1, 1, 16]</code_obj>
+ ]
+6 Imake_function
+stack->
+[ 1 ]
+[ x ]
+[ <__main__.FuncObject object at 0x028CA7B0> ]
+7 Istore_name my_func
+stack->
+[ 1 ]
+[ x ]
+[ <__main__.FuncObject object at 0x028CA7B0> ]
+9 Iload_name my_func
+stack->
+[ 1 ]
+[ x ]
+[ <__main__.FuncObject object at 0x028CA7B0> ]
+11 Iload_const <compil.ObjectNone object at 0x028CA6D0>
+stack->
+[ 1 ]
+[ <compil.ObjectNone object at 0x028CA6D0> ]
+[ <__main__.FuncObject object at 0x028CA7B0> ]
+13 Iload_const 1
+stack->
+[ 1 ]
+[ <compil.ObjectNone object at 0x028CA6D0> ]
+[ <__main__.FuncObject object at 0x028CA7B0> ]
+15 Icall_function
+<New frame executing> Frame str sp: -1 f_globals: {} f_locals: {'x': <compil.ObjectNone object at 0x028CA6D0>} pc: 0 ret val None
+0 Iload_const |hi!
+stack->
+[ |hi! ]
+2 Iprint
+PRINT ob: |hi!
+stack->
+[ |hi! ]
+3 Iload_const 3.0
+stack->
+[ 3.0 ]
+5 Ireturn_value
+stack->
+[ 3.0 ]
+</frame executing>
+stack->
+[ 1 ]
+[ <compil.ObjectNone object at 0x028CA6D0> ]
+[ 3.0 ]
+16 Istore_name c_var
+stack->
+[ 1 ]
+[ <compil.ObjectNone object at 0x028CA6D0> ]
+[ 3.0 ]
+18 Iload_name c_var
+stack->
+[ 1 ]
+[ <compil.ObjectNone object at 0x028CA6D0> ]
+[ 3.0 ]
+20 Iprint
+PRINT ob: 3.0
+stack->
+[ 1 ]
+[ <compil.ObjectNone object at 0x028CA6D0> ]
+[ 3.0 ]
+21 Istop
+stack->
+[ 1 ]
+[ <compil.ObjectNone object at 0x028CA6D0> ]
+[ 3.0 ]
 </frame executing>
 //=========================
-// /Not correct
+// /Func
 //=========================

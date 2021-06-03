@@ -1,9 +1,9 @@
-﻿from compil import Compiller, Object, read, ObjectInt, ObjectFloat, ObjectNone, ObjectBoolean, ObjectStr,\
-    FRAME, FLOAT, STR, NONE, FUNC, LIST, EXIT_SUCCESS, EXIT_FAIL
+﻿from compil import Compiller, Object, read, ObjectInt, ObjectFloat, ObjectNone, ObjectBoolean, ObjectStr, CodeObject
 from opcodes import WE_LOAD_CONSTS, WE_LOAD_NAME, WE_LOAD_NAME2, WE_LOAD_NAME3, WE_STORE_NAME
 from enums import INT, FLOAT, STR, BOOLEAN, NONE, CODE, FRAME, LIST, FUNC, NATIVE_CLASS, EXIT_SUCCESS, EXIT_FAIL
 
 import sys
+import traceback
 
 
 def convert_float2objfloat(v):  # boxing: float_val->obj
@@ -81,6 +81,9 @@ def ukFloat_div(v, w):  # takes to references, works with them - unbox them, giv
 # Runtime objs
 # ----------------------------------
 
+DEFAULT_STACK_SIZE = 10
+DEFAULT_FRAME_STACK_SIZE = 10
+
 
 class ObjectList(Object):
     def __init__(self, size_, type_):  # Initialize object by size for list
@@ -105,18 +108,24 @@ class FrameObject(Object):
     def __init__(self, frame_code_object, frame_globals, frame_locals, type_):
         super().__init__(type_, 0)
         self.f_code = frame_code_object
-        self.stack = []
+        self.sp = -1  # pointer to frameS stack top
+        self.stack = [None] * DEFAULT_STACK_SIZE
         self.f_globals = frame_globals
         self.f_locals = frame_locals
         self.pc = 0
         self.return_value = None
         self.v = self
 
+    def __str__(self):
+        s = 'Frame str sp: {0} f_globals: {1} f_locals: {2} pc: {3} ret val {4}'.format(
+            self.sp, self.f_globals, self.f_locals, self.pc, self.return_value)
+
+        return s
+
 
 class FuncObject(Object):
     # globals inherit from main fraim(builtin functions)
     def __init__(self, func_code_object, globals_, default, vm, type_):
-        # default - we l create dict with params
         super().__init__(type_, 0)
         self._vm = vm  # pointer to class Vm to deal wit eval_frame method
         self.func_globals = globals_
@@ -137,8 +146,9 @@ class FuncObject(Object):
 
 # ///// bytecode realizations as funcs
 def Iload_const(vm):
-    vm.pc += 1
-    arg_ind = vm.b_c[vm.pc]  # we determe index for loading on self.frame.stack
+    vm.frame.pc += 1
+    # we determe index for loading on self.frame.stack
+    arg_ind = vm.b_c[vm.frame.pc]
     ob = vm.consts[arg_ind]
     vm.push_stack(ob)
 
@@ -163,9 +173,9 @@ def Iadd(vm):
 def Isub(vm):
     right = vm.pop_stack()
     left = vm.pop_stack()
-    ob = ukFloat_sub(left, right)  # работаем с обьектами
-    decref(right)  # работаем с обьектами
-    decref(left)   # работаем с  обьектами
+    ob = ukFloat_sub(left, right)
+    decref(right)  
+    decref(left)   
     vm.push_stack(ob)
 
 
@@ -174,7 +184,7 @@ def Imult(vm):
     right = vm.pop_stack()
     left = vm.pop_stack()
     if (right.type == FLOAT and left.type == FLOAT) or (left.type == FLOAT and right.type == FLOAT)(vm):
-        ob = ukFloat_mult(left, right)  # работаем с обьектами
+        ob = ukFloat_mult(left, right)  
     elif (right.type == STR and left.type == FLOAT)(vm):
         n = convert_objfloat2float(left)
         n = int(n)
@@ -183,30 +193,30 @@ def Imult(vm):
         n = convert_objfloat2float(right)
         n = int(n)
         ob = ukStr_mult(n, left)
-    decref(right)  # работаем с обьектами
-    decref(left)   # работаем с обьектами
+    decref(right) 
+    decref(left)   
     vm.push_stack(ob)
 
 
 def Idiv(vm):
     right = vm.pop_stack()
     left = vm.pop_stack()
-    ob = ukFloat_div(left, right)  # работаем с обьектами
-    decref(right)  # работаем с обьектами
-    decref(left)   # работаем с обьектами
+    ob = ukFloat_div(left, right) 
+    decref(right)  
+    decref(left)   
     vm.push_stack(ob)
 
 
 def Istore_name(vm):
-    vm.pc += 1
-    arg_ind = vm.b_c[vm.pc]
+    vm.frame.pc += 1
+    arg_ind = vm.b_c[vm.frame.pc]
     # assign to var id (in locals) to object(from the top of vm.stack)
     vm.locals_[vm.names[arg_ind].v] = vm.pop_stack()
 
 
 def Iload_name(vm):
-    vm.pc += 1
-    arg_ind = vm.b_c[vm.pc]
+    vm.frame.pc += 1
+    arg_ind = vm.b_c[vm.frame.pc]
     var = vm.names[arg_ind]
     ob = None
     var_v = var.v
@@ -218,8 +228,8 @@ def Iload_name(vm):
 
 
 def Iloadfield(vm):
-    vm.pc += 1
-    arg_ind = vm.b_c[vm.pc]
+    vm.frame.pc += 1
+    arg_ind = vm.b_c[vm.frame.pc]
     var = vm.names[arg_ind]
     # obj on vm.stack
     ob = vm.pop_stack()
@@ -232,8 +242,8 @@ def Iloadfield(vm):
 
 
 def Iinvokenative(vm):
-    vm.pc += 1
-    arg_ind = vm.b_c[vm.pc]
+    vm.frame.pc += 1
+    arg_ind = vm.b_c[vm.frame.pc]
     var = vm.names[arg_ind]
     # obj on vm.stack
     ob = vm.pop_stack()
@@ -307,7 +317,7 @@ def Ioaload(vm):
 
 def Iprint(vm):
     if vm.frame.stack:
-        ob = vm.top()
+        ob = vm.pop_stack()
         if ob.type != LIST:
             print('PRINT ob: {0}'.format(ob.v))
         else:
@@ -330,39 +340,39 @@ def Imake_function(vm):
 
 
 def Icall_function(vm):
-    num_func_args = vm.pop_stack().v  # here we got float val
+    num_func_args = vm.pop_stack().v  # get num of args - here we got float val
     num_func_args = int(num_func_args)
     result = ObjectNone(None, NONE)
     if num_func_args == 0:
 
-        # call custom func
-        result = vm.push_stack(vm.pop_stack())._call_(None)
+        result = vm.push_stack(vm.pop_stack())._call_(None)  # call custom func
     else:
-        # create args list with determed size
-        arg_list = [0] * num_func_args
+        arg_list = [0] * num_func_args  # create args list with determed size
 
         for i in range(num_func_args):  # copy args from vm.stack to args tuple
             arg_list[num_func_args-i-1] = vm.pop_stack()
+
+        func_obj:FuncObject=None    
 
         func_obj = vm.pop_stack()
 
         func_objs_local_dict = func_obj.func_locals
 
-        # create args
         i = 0
-        for key, val in func_objs_local_dict.items():
+        for key, _ in func_objs_local_dict.items():  # create args
             func_objs_local_dict[key] = arg_list[i]
             i += 1
 
         result = func_obj._call_(func_objs_local_dict)
 
         vm.push_stack(result)
+        vm.vm_is_running = True
 
 
 def Ireturn_value(vm):
-    # transport value from current frame stack to caller frame stack top
-    # vm.pop_frame()
-    vm.return_value = vm.frame.stack.pop()
+    # transport value from current frame stack to vm return value
+    vm.return_value = vm.pop_stack()
+    vm.vm_is_running = False
 
 
 def Inop(vm):
@@ -421,31 +431,38 @@ class Vm:
 
         #  ////  /bytecode str to print
 
-        self.frames = []  # stack frame
+        self.fsp = -1  # pointer to frame stack
+        self.frames = [None] * DEFAULT_FRAME_STACK_SIZE  # stack frame
+
         # current frame (to deal with it-the frame that is the first on stack frame)
         self.frame = None
 
     def push_frame(self, frame: FrameObject):
-        self.frames.append(frame)  # realize frame stack
+        self.fsp += 1
+        self.frames[DEFAULT_FRAME_STACK_SIZE - 1 -
+                    self.fsp] = frame  # realize frame stack
         # here we set current frame (to deal with it-the frame that is the first on stack frame)
         self.frame = frame
 
     def pop_frame(self):
-        len_frame_stack = len(self.frames)
-        self.frames.pop()
-        if len_frame_stack > 1:
-            self.frame = self.frames[-1]
+        if self.fsp > 0:  # one or more
+            self.fsp -= 1
+            frame = self.frames[DEFAULT_FRAME_STACK_SIZE - 1 - self.fsp]
+            return frame
 
     # ///// deals with current frame stack
 
     def pop_stack(self) -> Object:
-        return self.frame.stack.pop()
+        ret_st_val = self.stack[DEFAULT_STACK_SIZE - 1 - self.frame.sp]
+        self.frame.sp -= 1
+        return ret_st_val
 
     def push_stack(self, val: Object):
-        self.frame.stack.append(val)
+        self.frame.sp += 1
+        self.stack[DEFAULT_STACK_SIZE - 1 - self.frame.sp] = val
 
     def popn_stack(self, n):
-        ret_list = [0]*n
+        ret_list = [0] * n
 
         for i in range(n):
             ret_list[n - i - 1] = self.pop_stack()
@@ -455,18 +472,19 @@ class Vm:
     # ////// /deals with current frame stack
 
     def print_instruction(self):
-        op = self.b_c[self.pc]
+        op = self.b_c[self.frame.pc]
         consts = self.frame.f_code.co_consts
         names = self.frame.f_code.co_names
+
         inst_name = self.vm_instructions[op]
         if op == WE_LOAD_CONSTS:
             print("{0} {1} {2}".format(
-                self.pc, inst_name, consts[self.b_c[self.pc + 1]].v))
+                self.frame.pc, inst_name, consts[self.b_c[self.frame.pc + 1]].v))
         elif op == WE_LOAD_NAME or op == WE_LOAD_NAME2 or op == WE_LOAD_NAME3 or op == WE_STORE_NAME:
-            print("{0} {1} {2}".format(self.pc, inst_name,
-                                       names[self.b_c[self.pc + 1]].v))
+            print("{0} {1} {2}".format(self.frame.pc, inst_name,
+                                       names[self.b_c[self.frame.pc + 1]].v))
         else:
-            print("{0} {1}".format(self.pc, inst_name))
+            print("{0} {1}".format(self.frame.pc, inst_name))
 
     # here we can print ex co_names or co_consts
     def print_objs_arrs(self, objs_arr, label):
@@ -483,10 +501,11 @@ class Vm:
 
     def print_stack(self, stack):
         if len(stack) != 0:
+            print('stack->')
             for i in stack:
-                print('stack->', end=' ')
-                print('[ %s ]' % i.v, end=' ')
-                print()
+                if i != None:
+                    print('[ %s ]' % i.v)
+                    # print()
 
     def top(self):
         return self.frame.stack[-1]
@@ -500,35 +519,55 @@ class Vm:
         self.push_frame(frame)
 
         if trace:
-            if len(self.frames) == 1:
+            if self.fsp == 0:
                 print('<First frame executing>', self.frame)
             else:
                 print('<New frame executing>', self.frame)
+
         self.pc = self.frame.pc
-        self.vm_is_running = True
         self.b_c = self.frame.f_code.co_code
+        self.stack = self.frame.stack
+
         self.locals_ = self.frame.f_locals
         self.globals_ = self.frame.f_globals
 
         self.consts = self.frame.f_code.co_consts
         self.names = self.frame.f_code.co_names
-        
-        while self.vm_is_running:
-            op = self.b_c[self.pc]
+        self.vm_is_running = True
+        try:
+            while self.vm_is_running:
+
+                op = self.b_c[self.frame.pc]
+
+                if trace:
+                    self.print_instruction()
+
+                func_ptr = self.func_bytecode_ptr[op]
+                func_ptr(self)  # pass vm object
+                # self.pc += 1
+                self.frame.pc += 1
+
+                if trace:
+                    self.print_stack(self.stack)
+                    # print('pc', self.frame.pc)
+                    # print('frame', self.frame)
 
             if trace:
-                self.print_instruction()
+                print('</frame executing>')
 
-            func_ptr = self.func_bytecode_ptr[op]
-            func_ptr(self)
-            self.pc += 1
+            self.frame = self.pop_frame()  # set previous frame as current current frame
+            if self.frame != None:
+                self.pc = self.frame.pc
+                self.b_c = self.frame.f_code.co_code
+                self.stack = self.frame.stack
+                self.locals_ = self.frame.f_locals
+                self.globals_ = self.frame.f_globals
 
-            if trace:
-                self.print_stack(self.frame.stack)
-
-        self.pop_frame()
-        if trace:
-            print('</frame executing>')
+                self.consts = self.frame.f_code.co_consts
+                self.names = self.frame.f_code.co_names
+        except Exception as e:
+            traceback.print_tb(e.__traceback__)
+            traceback.print_exc()
 
         return self.return_value
 
@@ -543,10 +582,12 @@ with open('src.lisp', 'r', encoding='utf8') as f:
     c = read(s)
 
 compiller = Compiller(
-# trace=False
+    # trace=False
 )
 vm = Vm()
-compiller.compille(c)
+object_co = CodeObject(CODE)
+object_co.co_name = '<module>'
+compiller.compille(c, object_co)
 module_co_obj = compiller.get_module_co_obj()
 
 # First NEW Frame object
@@ -554,5 +595,5 @@ main_fraim = FrameObject(module_co_obj, {}, {}, FRAME)
 print('mod info', module_co_obj)
 
 vm.eval_frame(main_fraim
-# , trace=False
-)
+              # , trace=False
+              )
