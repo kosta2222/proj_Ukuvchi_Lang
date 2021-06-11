@@ -16,8 +16,11 @@
     Imake_function, # 15
     Ireturn_value, # 16
     Icall_function, # 17
-    Iimport_module_bname #18 
-    )=range(19)
+    Iimport_module_bname, #18
+    Ieq, # 19
+    Ine,  # 20 
+    Iprocent # 21
+    )=range(22)
 
 # HAVE_ARGUMENT=0 # up to this bytecode, opcodes have argument 
 WE_LOAD_CONSTS=1

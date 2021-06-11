@@ -1,6 +1,29 @@
-﻿// calculate arithmetic expression (we need spaces there and [ ] parents) and print var
-($ (set! my_var (arif 3 + 4 * 2 - [ 1 + 5 ]))
-(print (my_var)))
+﻿//===============================================================================================
+// here cmd usage
+//===============================================================================================
+usage: python ukuvchi.py [-h] [--natural_mode NATURAL_MODE] [--verbose] uk_script
+
+bytecode interpretator with attempt to be like on natural lang(cmd opt)
+
+positional arguments:
+  uk_script             Uk script
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --natural_mode NATURAL_MODE, -nm NATURAL_MODE
+                        with True par we read natural like lang
+  --verbose, -v         with this par we print trace of compiller and vm
+
+//===============================================================================================
+// /here cmd usage
+//===============================================================================================  
+
+// calculate arithmetic expression (we need spaces there and [ ] parents) and print var
+// $>  begin of a program
+// ->  between expressions
+// -!  end of a program
+$> set! my_var (arif 3 + 4 * 2 - [ 1 + 5 ]) -> print my_var -!
+
 Out:
 0 Iload_const 3.0
 2 Iload_const 4.0
@@ -17,81 +40,78 @@ Out:
 PRINT ob: 5.0
 19 Istop  
 
-//===============================================================
+//===============================================================================================
 // support natural language like keywords for arifmetic and print
+// we need launch as python ukuvchi <file> -nm True 
 // Поддержка естественного языка на русском
-// файл программы должен быть в кодировке cp1251
-//===============================================================
-
-($ (скажи (арифметика 2 + 3 * 4))
-
-Out:
-<First frame executing> <__main__.FrameObject object at 0x023483F0>
-0 Iload_const 2.0
-stack-> [ 2.0 ]
-2 Iload_const 7.0
-stack-> [ 2.0 ]
-stack-> [ 7.0 ]
-4 Iload_const 3.0
-stack-> [ 2.0 ]
-stack-> [ 7.0 ]
-stack-> [ 3.0 ]
-6 Imult
-stack-> [ 2.0 ]
-stack-> [ 21.0 ]
-7 Iadd
-stack-> [ 23.0 ]
-8 Iprint
-PRINT ob: 23.0
-stack-> [ 23.0 ]
-9 Istop
-stack-> [ 23.0 ]
-</frame executing>
-
-// Загрузка полезного нативного модуля(на Python-как класса и он должен совпадать с имнем файла т.е класс System и файла System.py)
-// и узнаем дату (без трассировки)
-($
-(загрузи Система как сессия) (вызови_встроенный сессия date)
-)
+// файл программы должен быть в кодировке utf8 без BOM
+//===============================================================================================
+$> скажи (арифметика 2 + 3 * 4) -!
+ученик 
+скажи сколько арифметика 2 * 3 + 1 конецсколько и
+скажи сколько арифметика 100 + 200 конецсколько и
+выполни
 
 Out:
-2021-05-29 20:32:54.483000
+PRINT ob: 14.0
+PRINT ob: 300.0
 
+загрузи Система как сессия и вызовивстроенный сессия date 
+выполни
 
-//===============================================================
+Out:
+2021-06-12 01:13:29.635000
+
+ученик
+определи вар_1 10 и скажи вар_1
+выполни
+
+Out:
+PRINT ob: 10.0
+
+ученик
+определи вар_1 10 и скажи сколько арифметика вар_1 + 20 конецсколько
+выполни
+
+Out:
+PRINT ob: 30.0
+
+ученик
+определи вар_1 200 и скажи сколько арифметика вар_1 проценты 10 конецсколько
+выполни
+
+Out:
+PRINT ob: 20.0
+
+ученик
+скажи сколько арифметика 300 проценты 20 конецсколько
+выполни
+
+Out:
+PRINT ob: 60.0
+
+=================================================================================================
 // / support natural language like keywords for arifmetic and print
 // Поддержка естественного языка на русском
 // файл программы должен быть в кодировке utf8 без BOM
-//===============================================================
+//===============================================================================================
 
 
 // create float var without arif keyword and print it
-($ (set! fl_var 9) (print fl_var))
-
+$> set! fl_var 9 -> print fl_var -!
 
 // print string
-($ (print |test_str))
+$> print |test_str -!
 
 
-// we create string var via arif keyword (strings support concatination), string must trail with | symbol 
-// and _ instedof whitespace
-($ (set! my_str_var (arif |this_is_test_string_var)) (print my_str_var))
-Out:
-0 Iload_const this_is_test_string_var
-2 Istore_name my_str_var
-4 Iload_name my_str_var
-6 Iprint
-PRINT ob: this_is_test_string_var
-7 Istop
 
-
-// support line comment
-($(// line comment) 
-(set! fl_var 9) (print fl_var))
-
+// support line comment (expression comment)
+$> // line comment 
+-> // set! fl_var 9 -> // print fl_var -!
 
 // here we add 2 string and print var
-($ (set! my_str_var (arif |this_is_test_string_var + |_yes)) (print my_str_var))
+$> set! my_str_var (arif |this_is_test_string_var + |_yes) -> print my_str_var -!
+
 Out:
 0 Iload_const this_is_test_string_var
 2 Iload_const _yes
@@ -102,8 +122,9 @@ Out:
 PRINT ob: this_is_test_string_var_yes
 10 Istop
 
-// assign True or False value and print its inner str method 
-($ (set! a False) (print(invokenative a _str_ )))
+// assign True or False value and print its inner str method
+$-> set! a False -> print ( invokenative a _str_ ) -!
+ 
 Out:
 0 Iload_const 0
 2 Istore_name a
@@ -116,453 +137,454 @@ PRINT ob: False
 
 
 // invokenative arrbitrary  metod from inner float object with args , print top of stack
-($ (set! a 9) (print(invokenative a  minus (args 7 3))))
+$> set! a 9 -> print (invokenative a  _add_ (args 1)) -!
 
 // if method have no args we invokenative it witout arg keyword
-($ (set! a 7) (print(invokenativenative a _str_) ) 
+$> set! a 7 -> print(invokenativenative a _str_) -!
 
 
 // print arrbitrary field from the object
-($ (set! fl_var 7)(print (getfield fl_var test)))
+$> set! fl_var 7 -> print (getfield fl_var test) -!
 
 
 // make list with arguments , print top of stack 
-($ (print(build_list(args 3 4 5))))
-Out:
-0 Iload_const 3.0
-2 Iload_const 4.0
-4 Iload_const 5.0
-6 Iload_const 3.0
-8 Ibuild_list
-9 Iprint
-PRINT ob: 3.0 4.0 5.0
-10 Istop
+$> print(build_list(args 3 4 5))) -!
 
+Out:
+<First frame executing> Frame str sp: -1 f_globals: {} f_locals: {} pc: 0 ret val None
+0 Iload_const 3.0
+stack->
+[ 3.0 ]
+2 Iload_const 4.0
+stack->
+[ 4.0 ]
+[ 3.0 ]
+4 Iload_const 5.0
+stack->
+[ 5.0 ]
+[ 4.0 ]
+[ 3.0 ]
+6 Iload_const 3
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ 3.0 ]
+8 Ibuild_list
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ <__main__.ObjectList object at 0x00799430> ]
+9 Iprint
+PRINT list
+3.0 4.0 5.0
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ <__main__.ObjectList object at 0x00799430> ]
+10 Istop
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ <__main__.ObjectList object at 0x00799430> ]
+</frame executing>
 
 // make list and append 9 to the end of it, print it
-($ (set! my_list(build_list(args 2 4 5))) 
-   (invokenative my_list append (args 9))
-   (print my_list)
-)
-Out:
+$> set! my_list (build_list ( args 2 4 5)) -> print my_list -> invokenative my_list append (args 9) ->  print my_list -!
+
+<First frame executing> Frame str sp: -1 f_globals: {} f_locals: {} pc: 0 ret val None
 0 Iload_const 2.0
+stack->
+[ 2.0 ]
 2 Iload_const 4.0
+stack->
+[ 4.0 ]
+[ 2.0 ]
 4 Iload_const 5.0
-6 Iload_const 3.0
+stack->
+[ 5.0 ]
+[ 4.0 ]
+[ 2.0 ]
+6 Iload_const 3
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ 2.0 ]
 8 Ibuild_list
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
 9 Istore_name my_list
-11 Iload_const 9.0
-13 Iload_const 1.0
-15 Iload_name my_list
-17 Iinvokenativedynamic append
-num_meth_args 1
-19 Iload_name my_list
-21 Iprint
-PRINT ob: 2.0 4.0 5.0 9.0
-22 Istop
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
+11 Iload_name my_list
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
+13 Iprint
+PRINT list
+2.0 4.0 5.0
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
+14 Iload_const 9.0
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 9.0 ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
+16 Iload_const 1
+stack->
+[ 3 ]
+[ 1 ]
+[ 9.0 ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
+18 Iload_name my_list
+stack->
+[ <__main__.ObjectList object at 0x00F1A690> ]
+[ 1 ]
+[ 9.0 ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
+20 Iinvokenative append
+stack->
+[ <__main__.ObjectList object at 0x00F1A690> ]
+[ 1 ]
+[ <compil.ObjectNone object at 0x00F1A770> ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
+22 Iload_name my_list
+stack->
+[ <__main__.ObjectList object at 0x00F1A690> ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
+[ <compil.ObjectNone object at 0x00F1A770> ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
+24 Iprint
+PRINT list
+2.0 4.0 5.0 9.0
+stack->
+[ <__main__.ObjectList object at 0x00F1A690> ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
+[ <compil.ObjectNone object at 0x00F1A770> ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
+25 Istop
+stack->
+[ <__main__.ObjectList object at 0x00F1A690> ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
+[ <compil.ObjectNone object at 0x00F1A770> ]
+[ <__main__.ObjectList object at 0x00F1A690> ]
+</frame executing>
 
 // take item of array by index and print it
-($
-(set! my_l(build_list(args 3 4 5)))
-(print (arr_take_index my_l 2))
-)
+$>
+set! my_l(build_list(args 3 4 5)) ->
+print (arr_take_index my_l 2) -!
+
 Out:
-0 Iload_const 3.0
+<First frame executing> Frame str sp: -1 f_globals: {} f_locals: {} pc: 0 ret val None
+0 Iload_const 7.0
+stack->
+[ 7.0 ]
+sp 0
 2 Iload_const 4.0
+stack->
+[ 4.0 ]
+[ 7.0 ]
+sp 1
 4 Iload_const 5.0
+stack->
+[ 5.0 ]
+[ 4.0 ]
+[ 7.0 ]
+sp 2
 6 Iload_const 3
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ 7.0 ]
+sp 3
 8 Ibuild_list
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ <__main__.ObjectList object at 0x00F29530> ]
+sp 0
 9 Istore_name my_l
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ <__main__.ObjectList object at 0x00F29530> ]
+sp -1
 11 Iload_const 2.0
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ 2.0 ]
+sp 0
 13 Iload_name my_l
+stack->
+[ 3 ]
+[ 5.0 ]
+[ <__main__.ObjectList object at 0x00F29530> ]
+[ 2.0 ]
+sp 1
 15 Ioaload
+stack->
+[ 3 ]
+[ 5.0 ]
+[ <__main__.ObjectList object at 0x00F29530> ]
+[ 5.0 ]
+sp 0
 16 Iprint
 PRINT ob: 5.0
+stack->
+[ 3 ]
+[ 5.0 ]
+[ <__main__.ObjectList object at 0x00F29530> ]
+[ 5.0 ]
+sp 0
 17 Istop
+stack->
+[ 3 ]
+[ 5.0 ]
+[ <__main__.ObjectList object at 0x00F29530> ]
+[ 5.0 ]
+sp 0
+</frame executing>
 
 
 // assign array by index
-($
-(set! my_l(build_list(args 3 4 5)))
-(arr_assign_index my_l 0 10)
-(print my_l)
- )
-Out:
+$>
+set! my_l(build_list(args 3 4 5)) ->
+arr_assign_index my_l 0 10 ->
+print my_l -!
+ 
+Out: 
+<First frame executing> Frame str sp: -1 f_globals: {} f_locals: {} pc: 0 ret val None
 0 Iload_const 3.0
+stack->
+[ 3.0 ]
+sp 0
 2 Iload_const 4.0
+stack->
+[ 4.0 ]
+[ 3.0 ]
+sp 1
 4 Iload_const 5.0
+stack->
+[ 5.0 ]
+[ 4.0 ]
+[ 3.0 ]
+sp 2
 6 Iload_const 3
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ 3.0 ]
+sp 3
 8 Ibuild_list
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ <__main__.ObjectList object at 0x00F4A5B0> ]
+sp 0
 9 Istore_name my_l
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ <__main__.ObjectList object at 0x00F4A5B0> ]
+sp -1
 11 Iload_const 10.0
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 4.0 ]
+[ 10.0 ]
+sp 0
 13 Iload_const 0.0
+stack->
+[ 3 ]
+[ 5.0 ]
+[ 0.0 ]
+[ 10.0 ]
+sp 1
 15 Iload_name my_l
+stack->
+[ 3 ]
+[ <__main__.ObjectList object at 0x00F4A5B0> ]
+[ 0.0 ]
+[ 10.0 ]
+sp 2
 17 Ioastore
+stack->
+[ 3 ]
+[ <__main__.ObjectList object at 0x00F4A5B0> ]
+[ 0.0 ]
+[ 10.0 ]
+sp -1
 18 Iload_name my_l
+stack->
+[ 3 ]
+[ <__main__.ObjectList object at 0x00F4A5B0> ]
+[ 0.0 ]
+[ <__main__.ObjectList object at 0x00F4A5B0> ]
+sp 0
 20 Iprint
-PRINT ob: 10.0 4.0 5.0
+PRINT list
+10.0 4.0 5.0
+stack->
+[ 3 ]
+[ <__main__.ObjectList object at 0x00F4A5B0> ]
+[ 0.0 ]
+[ <__main__.ObjectList object at 0x00F4A5B0> ]
+sp 0
 21 Istop
+stack->
+[ 3 ]
+[ <__main__.ObjectList object at 0x00F4A5B0> ]
+[ 0.0 ]
+[ <__main__.ObjectList object at 0x00F4A5B0> ]
+sp 0
+</frame executing>
 
-//=========================
+//================================================================================================
 // Func
-//=========================
+//================================================================================================
 // call function
-1) ($ (set! my_func (defun (params x) ((print |hi!) (return 3)) ) ) (set! c_var(call my_func (args 1))) (print c_var)) 
+//set! <func_name> (defun (params <par1> <par2> ... <par n>) (<body>:= ">" <exp1> -> <exp2> ->... <expn> [return <any>] -) )
+$> set! my_func  (defun (params x) (> print |hi! -> return 1 -))  -> call my_func (args 1)  -!
 
 Out:
-<First frame executing> Frame str sp: -1 f_globals: {} f_locals: {} pc: 0 ret val None
+<First frame executing> <__main__.FrameObject object at 0x00C37470>
 0 Iload_const
 <code_obj>
 co_name: <func>
-co_arcount: 0
-co_consts: |hi! 3.0
-co_names:
+co_argcount: 0
+co_consts: |hi! 1.0
+co_names: []
 co_varnames: []
-co_code: [1, 0, 10, 1, 1, 16]</code_obj>
+co_code: [1, 0, 10, 1, 1, 16, 7]</code_obj>
 
-stack->
-[
+stack-> [
 <code_obj>
 co_name: <func>
-co_arcount: 0
-co_consts: |hi! 3.0
-co_names:
+co_argcount: 0
+co_consts: |hi! 1.0
+co_names: []
 co_varnames: []
-co_code: [1, 0, 10, 1, 1, 16]</code_obj>
+co_code: [1, 0, 10, 1, 1, 16, 7]</code_obj>
  ]
 2 Iload_const x
-stack->
-[ x ]
-[
+stack-> [
 <code_obj>
 co_name: <func>
-co_arcount: 0
-co_consts: |hi! 3.0
-co_names:
+co_argcount: 0
+co_consts: |hi! 1.0
+co_names: []
 co_varnames: []
-co_code: [1, 0, 10, 1, 1, 16]</code_obj>
+co_code: [1, 0, 10, 1, 1, 16, 7]</code_obj>
  ]
+stack-> [ x ]
 4 Iload_const 1
-stack->
-[ 1 ]
-[ x ]
-[
+stack-> [
 <code_obj>
 co_name: <func>
-co_arcount: 0
-co_consts: |hi! 3.0
-co_names:
+co_argcount: 0
+co_consts: |hi! 1.0
+co_names: []
 co_varnames: []
-co_code: [1, 0, 10, 1, 1, 16]</code_obj>
+co_code: [1, 0, 10, 1, 1, 16, 7]</code_obj>
  ]
+stack-> [ x ]
+stack-> [ 1 ]
 6 Imake_function
-stack->
-[ 1 ]
-[ x ]
-[ <__main__.FuncObject object at 0x0117A750> ]
+stack-> [ <__main__.FuncObject object at 0x00C37610> ]
 7 Istore_name my_func
-stack->
-[ 1 ]
-[ x ]
-[ <__main__.FuncObject object at 0x0117A750> ]
 9 Iload_name my_func
-stack->
-[ 1 ]
-[ x ]
-[ <__main__.FuncObject object at 0x0117A750> ]
+stack-> [ <__main__.FuncObject object at 0x00C37610> ]
 11 Iload_const 1.0
-stack->
-[ 1 ]
-[ 1.0 ]
-[ <__main__.FuncObject object at 0x0117A750> ]
+stack-> [ <__main__.FuncObject object at 0x00C37610> ]
+stack-> [ 1.0 ]
 13 Iload_const 1
-stack->
-[ 1 ]
-[ 1.0 ]
-[ <__main__.FuncObject object at 0x0117A750> ]
+stack-> [ <__main__.FuncObject object at 0x00C37610> ]
+stack-> [ 1.0 ]
+stack-> [ 1 ]
 15 Icall_function
-<New frame executing> Frame str sp: -1 f_globals: {} f_locals: {'x': <compil.ObjectFloat object at 0x0117A6F0>} pc: 0 ret val None
+<New frame executing> <__main__.FrameObject object at 0x00C37650>
 0 Iload_const |hi!
-stack->
-[ |hi! ]
+stack-> [ |hi! ]
 2 Iprint
 PRINT ob: |hi!
-stack->
-[ |hi! ]
-3 Iload_const 3.0
-stack->
-[ 3.0 ]
+stack-> [ |hi! ]
+3 Iload_const 1.0
+stack-> [ |hi! ]
+stack-> [ 1.0 ]
 5 Ireturn_value
-stack->
-[ 3.0 ]
+stack-> [ |hi! ]
+6 Istop
+stack-> [ |hi! ]
 </frame executing>
-stack->
-[ 1 ]
-[ 1.0 ]
-[ 3.0 ]
-16 Istore_name c_var
-stack->
-[ 1 ]
-[ 1.0 ]
-[ 3.0 ]
-18 Iload_name c_var
-stack->
-[ 1 ]
-[ 1.0 ]
-[ 3.0 ]
-20 Iprint
-PRINT ob: 3.0
-stack->
-[ 1 ]
-[ 1.0 ]
-[ 3.0 ]
-21 Istop
-stack->
-[ 1 ]
-[ 1.0 ]
-[ 3.0 ]
+stack-> [ 1.0 ]
 </frame executing>
-
-($ (set! my_func (defun (params x) ((print |hi!) (return (arif x + 3))) ) ) (set! c_var(call my_func (args 1))) (print c_var))
-
-Out:
-0 Iload_const
-<code_obj>
-co_name: <func>
-co_arcount: 0
-co_consts: |hi! 3.0
-co_names: x
-co_varnames: []
-co_code: [1, 0, 10, 8, 0, 1, 1, 2, 16]</code_obj>
-
-stack->
-[
-<code_obj>
-co_name: <func>
-co_arcount: 0
-co_consts: |hi! 3.0
-co_names: x
-co_varnames: []
-co_code: [1, 0, 10, 8, 0, 1, 1, 2, 16]</code_obj>
- ]
-2 Iload_const x
-stack->
-[ x ]
-[
-<code_obj>
-co_name: <func>
-co_arcount: 0
-co_consts: |hi! 3.0
-co_names: x
-co_varnames: []
-co_code: [1, 0, 10, 8, 0, 1, 1, 2, 16]</code_obj>
- ]
-4 Iload_const 1
-stack->
-[ 1 ]
-[ x ]
-[
-<code_obj>
-co_name: <func>
-co_arcount: 0
-co_consts: |hi! 3.0
-co_names: x
-co_varnames: []
-co_code: [1, 0, 10, 8, 0, 1, 1, 2, 16]</code_obj>
- ]
-6 Imake_function
-stack->
-[ 1 ]
-[ x ]
-[ <__main__.FuncObject object at 0x00DEA770> ]
-7 Istore_name my_func
-stack->
-[ 1 ]
-[ x ]
-[ <__main__.FuncObject object at 0x00DEA770> ]
-9 Iload_name my_func
-stack->
-[ 1 ]
-[ x ]
-[ <__main__.FuncObject object at 0x00DEA770> ]
-11 Iload_const 1.0
-stack->
-[ 1 ]
-[ 1.0 ]
-[ <__main__.FuncObject object at 0x00DEA770> ]
-13 Iload_const 1
-stack->
-[ 1 ]
-[ 1.0 ]
-[ <__main__.FuncObject object at 0x00DEA770> ]
-15 Icall_function
-<New frame executing> Frame str sp: -1 f_globals: {} f_locals: {'x': <compil.ObjectFloat object at 0x00DEA6B0>} pc: 0 ret val None
-0 Iload_const |hi!
-stack->
-[ |hi! ]
-2 Iprint
-PRINT ob: |hi!
-stack->
-[ |hi! ]
-3 Iload_name x
-stack->
-[ 1.0 ]
-5 Iload_const 3.0
-stack->
-[ 3.0 ]
-[ 1.0 ]
-7 Iadd
-stack->
-[ 3.0 ]
-[ 4.0 ]
-8 Ireturn_value
-stack->
-[ 3.0 ]
-[ 4.0 ]
-</frame executing>
-stack->
-[ 1 ]
-[ 1.0 ]
-[ 4.0 ]
-16 Istore_name c_var
-stack->
-[ 1 ]
-[ 1.0 ]
-[ 4.0 ]
-18 Iload_name c_var
-stack->
-[ 1 ]
-[ 1.0 ]
-[ 4.0 ]
-20 Iprint
-PRINT ob: 4.0
-stack->
-[ 1 ]
-[ 1.0 ]
-[ 4.0 ]
-21 Istop
-stack->
-[ 1 ]
-[ 1.0 ]
-[ 4.0 ]
-</frame executing> 
-
-2) pass None arg
-($ (set! my_func (defun (params x) ((print |hi!) (return (arif 3))) ) ) (set! c_var(call my_func (args None))) (print c_var))
-
-Out:
-<First frame executing> Frame str sp: -1 f_globals: {} f_locals: {} pc: 0 ret val None
-0 Iload_const
-<code_obj>
-co_name: <func>
-co_arcount: 0
-co_consts: |hi! 3.0
-co_names:
-co_varnames: []
-co_code: [1, 0, 10, 1, 1, 16]</code_obj>
-
-stack->
-[
-<code_obj>
-co_name: <func>
-co_arcount: 0
-co_consts: |hi! 3.0
-co_names:
-co_varnames: []
-co_code: [1, 0, 10, 1, 1, 16]</code_obj>
- ]
-2 Iload_const x
-stack->
-[ x ]
-[
-<code_obj>
-co_name: <func>
-co_arcount: 0
-co_consts: |hi! 3.0
-co_names:
-co_varnames: []
-co_code: [1, 0, 10, 1, 1, 16]</code_obj>
- ]
-4 Iload_const 1
-stack->
-[ 1 ]
-[ x ]
-[
-<code_obj>
-co_name: <func>
-co_arcount: 0
-co_consts: |hi! 3.0
-co_names:
-co_varnames: []
-co_code: [1, 0, 10, 1, 1, 16]</code_obj>
- ]
-6 Imake_function
-stack->
-[ 1 ]
-[ x ]
-[ <__main__.FuncObject object at 0x028CA7B0> ]
-7 Istore_name my_func
-stack->
-[ 1 ]
-[ x ]
-[ <__main__.FuncObject object at 0x028CA7B0> ]
-9 Iload_name my_func
-stack->
-[ 1 ]
-[ x ]
-[ <__main__.FuncObject object at 0x028CA7B0> ]
-11 Iload_const <compil.ObjectNone object at 0x028CA6D0>
-stack->
-[ 1 ]
-[ <compil.ObjectNone object at 0x028CA6D0> ]
-[ <__main__.FuncObject object at 0x028CA7B0> ]
-13 Iload_const 1
-stack->
-[ 1 ]
-[ <compil.ObjectNone object at 0x028CA6D0> ]
-[ <__main__.FuncObject object at 0x028CA7B0> ]
-15 Icall_function
-<New frame executing> Frame str sp: -1 f_globals: {} f_locals: {'x': <compil.ObjectNone object at 0x028CA6D0>} pc: 0 ret val None
-0 Iload_const |hi!
-stack->
-[ |hi! ]
-2 Iprint
-PRINT ob: |hi!
-stack->
-[ |hi! ]
-3 Iload_const 3.0
-stack->
-[ 3.0 ]
-5 Ireturn_value
-stack->
-[ 3.0 ]
-</frame executing>
-stack->
-[ 1 ]
-[ <compil.ObjectNone object at 0x028CA6D0> ]
-[ 3.0 ]
-16 Istore_name c_var
-stack->
-[ 1 ]
-[ <compil.ObjectNone object at 0x028CA6D0> ]
-[ 3.0 ]
-18 Iload_name c_var
-stack->
-[ 1 ]
-[ <compil.ObjectNone object at 0x028CA6D0> ]
-[ 3.0 ]
-20 Iprint
-PRINT ob: 3.0
-stack->
-[ 1 ]
-[ <compil.ObjectNone object at 0x028CA6D0> ]
-[ 3.0 ]
-21 Istop
-stack->
-[ 1 ]
-[ <compil.ObjectNone object at 0x028CA6D0> ]
-[ 3.0 ]
-</frame executing>
-//=========================
+//===============================================================================================
 // /Func
-//=========================
+//===============================================================================================
+// Test floats to equalent
+$>
+print (invokenative (eq 3 3) _str_) 
+-!
+
+Out:
+<First frame executing> Frame str sp: -1 f_globals: {} f_locals: {} pc: 0 ret val None
+0 Iload_const 0
+stack->
+[ 0 ]
+2 Iload_const 3.0
+stack->
+[ 3.0 ]
+[ 0 ]
+4 Iload_const 3.0
+stack->
+[ 3.0 ]
+[ 3.0 ]
+[ 0 ]
+6 Ieq
+stack->
+[ 3.0 ]
+[ 1 ]
+[ 0 ]
+7 Iinvokenative _str_
+stack->
+[ 3.0 ]
+[ 1 ]
+[ True ]
+9 Iprint
+PRINT ob: True
+stack->
+[ 3.0 ]
+[ 1 ]
+[ True ]
+10 Istop
+stack->
+[ 3.0 ]
+[ 1 ]
+[ True ]
+</frame executing>
